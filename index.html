@@ -13,56 +13,83 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--sky:#0E1224;--deep:#151B33;--panel:#1B2240;--rule:#2C3560;--text:#E8E6F2;--sub:#9A9BB8;
-  --seed:#8C93B8;--sprout:#7FC79A;--plan:#F2C46B;--go:#F07F5E;--link:#9DB8FF}
+  --seed:#8C93B8;--sprout:#7FC79A;--plan:#F2C46B;--go:#F07F5E;--link:#9DB8FF;--memo:#9DB8FF;--remind:#E58FC4;--lib:#5FC6C0;--vault:#C9A227}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--sky);color:var(--text)}
 body{font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;font-size:15px;line-height:1.7;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--link);outline-offset:2px}
+a{color:var(--link)}
 .wrap{max-width:680px;margin:0 auto;padding:1rem 1rem 2rem}
 .view[hidden]{display:none}
 h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
-.capture{display:flex;gap:.5rem;margin-bottom:1.2rem}
-.capture input{flex:1;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;font-size:1rem}
-.capture input::placeholder{color:var(--sub)}
+.capture{display:flex;gap:.4rem;margin-bottom:.4rem}
+.capture input{flex:1;min-width:0;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;font-size:1rem}
+.capture input::placeholder,textarea::placeholder,input::placeholder{color:var(--sub)}
+.kinds{display:flex;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap}
+.kinds button,.pill{border:1px solid var(--rule);background:transparent;border-radius:20px;padding:.15rem .75rem;cursor:pointer;font-size:.84rem;color:var(--sub)}
+.kinds button[aria-pressed="true"]{background:var(--plan);border-color:var(--plan);color:var(--sky);font-weight:700}
 .btn{border:1px solid var(--plan);background:var(--plan);color:var(--sky);border-radius:10px;padding:.5rem 1rem;cursor:pointer;font-weight:700}
 .btn.ghost{background:transparent;color:var(--plan)}
 .btn.sm{padding:.25rem .7rem;font-size:.84rem;border-radius:8px}
 .btn.quiet{border-color:var(--rule);background:transparent;color:var(--sub);font-weight:400}
+.btn.danger{border-color:var(--go);background:transparent;color:var(--go)}
 .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:.8rem 1rem;margin:.6rem 0}
-.card h2{margin:0 0 .3rem;font-size:.8rem;color:var(--sub);letter-spacing:.15em;font-weight:400}
+.card h2{margin:0 0 .3rem;font-size:.8rem;color:var(--sub);letter-spacing:.15em;font-weight:400;display:flex;justify-content:space-between}
+.card.alert{border-color:var(--go)}
 .note-row{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--rule);padding:.6rem .2rem;cursor:pointer}
 .note-row:last-child{border-bottom:none}
 .note-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .note-row .m{font-size:.74rem;color:var(--sub);white-space:nowrap}
 .dot{width:.7rem;height:.7rem;border-radius:50%;flex:0 0 auto;box-shadow:0 0 8px currentColor}
-.s-種{color:var(--seed);background:var(--seed)}.s-芽{color:var(--sprout);background:var(--sprout)}
-.s-構想{color:var(--plan);background:var(--plan)}.s-実行へ{color:var(--go);background:var(--go)}
 .empty{color:var(--sub);font-size:.9rem;padding:.6rem 0}
 .status{font-size:.84rem;color:var(--sub)}.status.err{color:var(--go)}
-/* 思案のページ */
 .back{border:none;background:none;color:var(--sub);cursor:pointer;padding:0;margin-bottom:.6rem}
 textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8}
-.render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;white-space:pre-wrap;min-height:4rem;cursor:text}
+.render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
 .render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
+.render .h{display:block;font-weight:700;margin:.5rem 0 .1rem;color:var(--plan)}
+.render .li{display:block;padding-left:1em;text-indent:-1em}
+.render .cl{display:flex;gap:.45rem;align-items:flex-start}
+.render .cl input{margin-top:.35rem;width:1.05rem;height:1.05rem;accent-color:var(--sprout)}
+.render .cl.done span{text-decoration:line-through;color:var(--sub)}
+.render .p{display:block;min-height:1em}
 .wl{color:var(--link);text-decoration:underline;text-decoration-style:dotted;cursor:pointer}
 .wl.missing{color:var(--sub)}
-.stages{display:flex;gap:.3rem;flex-wrap:wrap;margin:.7rem 0}
+.tag{color:var(--lib);cursor:pointer}
+.stages,.row-btns{display:flex;gap:.3rem;flex-wrap:wrap;margin:.6rem 0}
 .stages button{border:1px solid var(--rule);background:transparent;border-radius:20px;padding:.2rem .8rem;cursor:pointer;font-size:.86rem;color:var(--sub)}
-.stages button[aria-pressed="true"]{color:var(--sky);font-weight:700}
-.stages button[aria-pressed="true"].b-種{background:var(--seed);border-color:var(--seed)}
-.stages button[aria-pressed="true"].b-芽{background:var(--sprout);border-color:var(--sprout)}
-.stages button[aria-pressed="true"].b-構想{background:var(--plan);border-color:var(--plan)}
-.stages button[aria-pressed="true"].b-実行へ{background:var(--go);border-color:var(--go)}
-.tools{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0}
+.stages button[aria-pressed="true"]{color:var(--sky);font-weight:700;background:var(--plan);border-color:var(--plan)}
 .prompt{border-left:3px solid var(--plan);padding:.3rem .7rem;margin:.5rem 0;color:var(--plan);font-size:.9rem}
 .f label{display:block;font-size:.76rem;color:var(--sub);margin-bottom:.15rem}
-.f input,.f select{width:100%;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem .6rem}
+.f input,.f select,.f textarea{width:100%;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem .6rem}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:.5rem .7rem}
-.filters{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
-.filters input{flex:1 1 10rem;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.4rem .6rem}
+.filters{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.filters input[type=search]{flex:1 1 10rem;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem .6rem}
 .filters select{background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.4rem}
-/* つながり */
+.tags{display:flex;flex-wrap:wrap;gap:.3rem;margin:.2rem 0 .6rem}
+.tags button{border:1px solid var(--rule);background:transparent;border-radius:12px;padding:0 .55rem;cursor:pointer;color:var(--lib);font-size:.82rem}
+.tags button[aria-pressed="true"]{background:var(--lib);color:var(--sky)}
+.rem{display:flex;gap:.6rem;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--rule)}
+.rem:last-child{border-bottom:none}
+.rem .t{flex:1;min-width:0;cursor:pointer}
+.rem .when{font-size:.76rem;color:var(--sub)}
+.rem.over .when{color:var(--go)}
+.rem .chk{width:1.6rem;height:1.6rem;border-radius:50%;border:2px solid var(--remind);background:transparent;cursor:pointer;flex:0 0 auto}
+.shelves{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:.5rem}
+.shelf{border:1px solid var(--rule);background:var(--panel);border-radius:12px;padding:.8rem;text-align:left;cursor:pointer}
+.shelf b{display:block;font-size:1rem}
+.shelf span{font-size:.78rem;color:var(--sub)}
+.shelf.vault{border-color:var(--vault)}
+.shelf.vault b{color:var(--vault)}
+.field{display:flex;gap:.5rem;align-items:center;padding:.45rem 0;border-bottom:1px solid var(--rule)}
+.field .k{color:var(--sub);font-size:.82rem;min-width:5rem}
+.field .v{flex:1;min-width:0;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
+.field .v.hide{letter-spacing:.2em}
+pre.code{background:#0A0E1C;border:1px solid var(--rule);border-radius:8px;padding:.7rem;overflow-x:auto;font-size:.84rem;line-height:1.5;margin:.4rem 0;white-space:pre}
+.fedit{display:grid;grid-template-columns:1fr 2fr auto;gap:.3rem;margin:.25rem 0}
+.fedit input{background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.35rem .5rem;min-width:0}
+.key{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.15rem;letter-spacing:.08em;background:#0A0E1C;border:1px dashed var(--vault);border-radius:8px;padding:.7rem;text-align:center;word-break:break-all;color:var(--vault)}
 #graph-wrap{position:relative;height:calc(100vh - 150px);min-height:360px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;
   background:radial-gradient(ellipse at 50% 40%,#1A2148 0%,var(--sky) 70%);touch-action:none}
 #graph{width:100%;height:100%;display:block}
@@ -77,7 +104,7 @@ textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px soli
 .qadd{display:flex;gap:.4rem;margin-top:.5rem}
 .qadd input{flex:1;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem .6rem}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--deep);border-top:1px solid var(--rule);display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav.tabs button{flex:1;border:none;background:none;padding:.8rem 0;cursor:pointer;color:var(--sub);font-weight:700}
+nav.tabs button{flex:1;border:none;background:none;padding:.8rem 0;cursor:pointer;color:var(--sub);font-weight:700;font-size:.88rem;min-width:0}
 nav.tabs button[aria-selected="true"]{color:var(--plan)}
 </style>
 </head>
@@ -86,112 +113,227 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
   <section class="view" id="view-home">
     <h1>思案</h1>
     <form class="capture" id="capture" autocomplete="off">
-      <input id="cap" placeholder="思いついたことを1行で" aria-label="思いついたこと">
+      <input id="cap" placeholder="思いついたこと・覚えておくこと" aria-label="書く">
       <button class="btn" type="submit">書く</button>
     </form>
+    <div class="kinds" id="cap-kinds" role="group" aria-label="種類"></div>
     <span class="status" id="home-status"></span>
     <div id="home"></div>
   </section>
-
   <section class="view" id="view-note" hidden><div id="note"></div></section>
-
-  <section class="view" id="view-list" hidden>
-    <h1>一覧</h1>
+  <section class="view" id="view-search" hidden>
+    <h1>探す</h1>
     <div class="filters">
-      <input id="q" type="search" placeholder="探す">
-      <select id="fs"><option value="">すべての段階</option><option>種</option><option>芽</option><option>構想</option><option>実行へ</option><option value="寝かせ中">寝かせ中</option></select>
+      <input id="q" type="search" placeholder="すべてから探す">
+      <select id="fk"><option value="">すべて</option><option>思案</option><option>メモ</option><option>リマインダー</option><option>書庫</option></select>
+      <select id="fs"><option value="">ふつう</option><option value="pin">ピン留め</option><option value="inbox">受信箱</option><option value="sleep">寝かせ中</option><option value="archived">しまったもの</option></select>
     </div>
+    <div class="tags" id="tagbar"></div>
     <div style="margin-bottom:.6rem"><button class="btn ghost sm" type="button" id="mix">掛け合わせる</button></div>
-    <div id="list"></div>
+    <div id="results"></div>
   </section>
-
+  <section class="view" id="view-lib" hidden><div id="lib"></div></section>
   <section class="view" id="view-graph" hidden>
     <h1>つながり</h1>
-    <div class="legend"><span><i class="dot s-種"></i>種</span><span><i class="dot s-芽"></i>芽</span><span><i class="dot s-構想"></i>構想</span><span><i class="dot s-実行へ"></i>実行へ</span>
+    <div class="legend"><span><i class="dot" style="color:var(--seed);background:var(--seed)"></i>種</span><span><i class="dot" style="color:var(--sprout);background:var(--sprout)"></i>芽</span>
+      <span><i class="dot" style="color:var(--plan);background:var(--plan)"></i>構想</span><span><i class="dot" style="color:var(--go);background:var(--go)"></i>実行へ</span>
+      <span><i class="dot" style="color:var(--memo);background:var(--memo)"></i>メモ</span><span><i class="dot" style="color:var(--remind);background:var(--remind)"></i>リマインダー</span>
+      <span><i class="dot" style="color:var(--lib);background:var(--lib)"></i>書庫</span>
       <span style="margin-left:auto"><button class="btn quiet sm" type="button" id="g-fit">全体を見る</button></span></div>
     <div id="graph-wrap"><canvas id="graph"></canvas></div>
   </section>
-
   <section class="view" id="view-settings" hidden>
     <h1>設定</h1>
-    <p style="color:var(--sub);font-size:.88rem">思案は非公開のリポジトリに保存します。行軍表と同じトークンが使えます。</p>
-    <div class="grid2">
-      <div class="f"><label for="c-owner">ユーザー名</label><input id="c-owner" autocomplete="off"></div>
-      <div class="f"><label for="c-repo">リポジトリ</label><input id="c-repo" autocomplete="off"></div>
-      <div class="f"><label for="c-branch">ブランチ</label><input id="c-branch" autocomplete="off"></div>
-    </div>
-    <div class="f" style="margin-top:.5rem"><label for="c-token">トークン</label><input id="c-token" type="password" autocomplete="off"></div>
-    <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
-      <button class="btn" id="connect" type="button">接続して読み込む</button>
-      <button class="btn ghost" id="reload" type="button">読み込み直す</button>
-      <span class="status" id="conn-status"></span>
-    </div>
-    <div class="card" style="margin-top:1.4rem"><h2>問いの束</h2>
+    <div class="card"><h2>金庫</h2><div id="vault-settings"></div></div>
+    <div class="card"><h2>問いの束</h2>
       <p style="color:var(--sub);font-size:.84rem;margin:.2rem 0">「問いかける」はこの中から選ばれます。自分の問いを足していけます。外した問いは選ばれません。</p>
       <ul class="qlist" id="qlist"></ul>
-      <div class="qadd"><input id="q-new" placeholder="自分の問い(例:それを中学生に説明すると?)"><button class="btn sm" type="button" id="q-add">足す</button></div>
+      <div class="qadd"><input id="q-new" placeholder="自分の問い"><button class="btn sm" type="button" id="q-add">足す</button></div>
       <span class="status" id="q-status"></span>
+    </div>
+    <div class="card"><h2>接続</h2>
+      <p style="color:var(--sub);font-size:.84rem;margin:.2rem 0">非公開のリポジトリに保存します。行軍表と同じトークンが使えます。</p>
+      <div class="grid2">
+        <div class="f"><label for="c-owner">ユーザー名</label><input id="c-owner" autocomplete="off"></div>
+        <div class="f"><label for="c-repo">リポジトリ</label><input id="c-repo" autocomplete="off"></div>
+        <div class="f"><label for="c-branch">ブランチ</label><input id="c-branch" autocomplete="off"></div>
+      </div>
+      <div class="f" style="margin-top:.5rem"><label for="c-token">トークン</label><input id="c-token" type="password" autocomplete="off"></div>
+      <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="connect" type="button">接続して読み込む</button>
+        <button class="btn ghost" id="reload" type="button">読み込み直す</button>
+        <span class="status" id="conn-status"></span>
+      </div>
     </div>
     <p class="status" id="ver" style="margin-top:1rem"></p>
   </section>
 </div>
 <nav class="tabs" role="tablist">
-  <button role="tab" aria-selected="true" data-view="home">書く</button>
-  <button role="tab" aria-selected="false" data-view="list">一覧</button>
+  <button role="tab" aria-selected="true" data-view="home">ホーム</button>
+  <button role="tab" aria-selected="false" data-view="search">探す</button>
+  <button role="tab" aria-selected="false" data-view="lib">書庫</button>
   <button role="tab" aria-selected="false" data-view="graph">つながり</button>
   <button role="tab" aria-selected="false" data-view="settings">設定</button>
 </nav>
+
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-05 r2";
-const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache";
+const APP_VERSION = "2026-10-06 r3";
+const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
-const COLOR = { "種": "#8C93B8", "芽": "#7FC79A", "構想": "#F2C46B", "実行へ": "#F07F5E" };
+const KINDS = ["思案", "メモ", "リマインダー"];
+const STAGE_COLOR = { "種": "#8C93B8", "芽": "#7FC79A", "構想": "#F2C46B", "実行へ": "#F07F5E" };
+const KIND_COLOR = { "メモ": "#9DB8FF", "リマインダー": "#E58FC4", "書庫": "#5FC6C0" };
 const PROMPTS = ["逆にしたら?", "極端にしたら?(10倍、0にする)", "別の分野ならどうやる?", "何かと組み合わせたら?", "取り除いたら?",
   "誰のためのもの?", "なぜそれが要る?(3回なぜ)", "一番小さく試すなら?", "10年後から見たら?", "失敗するとしたら何が原因?"];
+const DEFAULT_SHELVES = ["金庫", "コード", "手順", "番号・住所", "知識"];
+const VAULT = "金庫";
+const LOCK_MS = 10 * 60 * 1000;          // 金庫は開けてから10分で閉じる
 
-// 問いの束:最初から入っている問い(外せる)+自分の問い(足せる・消せる)
-function promptPool(includeOff){
-  const off = new Set(state.doc.promptsOff || []);
-  const base = PROMPTS.map(t => ({ id: "base:" + t, text: t, mine: false, off: off.has(t) }));
-  const mine = (state.doc.prompts || []).map(p => ({ id: p.id, text: p.text, mine: true, off: !!p.off }));
-  const all = mine.concat(base);
-  return includeOff ? all : all.filter(p => !p.off);
-}
-function renderPrompts(){
-  const ul = document.getElementById("qlist"); if (!ul) return;
-  ul.innerHTML = promptPool(true).map(p => '<li class="' + (p.off ? "off" : "") + '"><span class="qt">' + esc(p.text) + "</span>" +
-    (p.mine ? '<span class="mine">自分</span>' : "") +
-    '<button type="button" class="btn quiet sm" data-q-toggle="' + esc(p.id) + '">' + (p.off ? "戻す" : "外す") + "</button>" +
-    (p.mine ? '<button type="button" class="btn quiet sm" data-q-del="' + esc(p.id) + '">消す</button>' : "") + "</li>").join("");
-}
-const state = { conn: null, doc: { version: 1, notes: [] }, sha: null, open: null, edit: false, view: "home" };
+const state = { conn: null, doc: { version: 2, notes: [] }, sha: null, open: null, edit: false, view: "home", backTo: "home",
+  shelf: null, tag: "", vaultKey: null, unsealed: {}, revealed: {}, newKey: null };
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-const today = () => window.__shianToday || new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10);
+const nowMs = () => window.__shianNow || Date.now();
+const today = () => window.__shianToday || new Date(nowMs() + 4 * 3600e3).toISOString().slice(0, 10);
+const nowHM = () => new Date(nowMs() + 9 * 3600e3).toISOString().slice(11, 16);
 const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+const addMonths = (d, n) => { const t = new Date(Date.parse(d + "T00:00:00Z")); const day = t.getUTCDate(); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() + n);
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(day, last)); return t.toISOString().slice(0, 10); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const rnd = n => Math.floor((window.__shianRandom ? window.__shianRandom() : Math.random()) * n);
+const md = d => (+d.slice(5, 7)) + "/" + (+d.slice(8, 10));
 
-/* ───── 思案の扱い ───── */
-const titleOf = n => (n.text || "").split("\n")[0].trim() || "(無題)";
+/* ───── 思案・メモ・リマインダー・書庫の扱い ───── */
 const notes = () => state.doc.notes;
 const byId = id => notes().find(n => n.id === id);
-const byTitle = t => notes().find(n => titleOf(n) === t.trim());
+const kindOf = n => n.kind || "思案";
+const sealed = n => !!n.sealed;
+// 金庫のものは、開けたときだけ中身が見える
+const plainOf = n => sealed(n) ? (state.unsealed[n.id] || null) : n;
+const textOf = n => { const p = plainOf(n); return p ? (p.text || "") : ""; };
+const titleOf = n => sealed(n) && !state.unsealed[n.id] ? "(鍵がかかっています)" : (textOf(n).split("\n")[0].trim() || "(無題)");
+const byTitle = t => notes().find(n => !sealed(n) && titleOf(n) === t.trim());
 const WIKI = /\[\[([^\]\n]+)\]\]/g;
+const TAG = /(^|[\s　])#([^\s#　,、。]+)/g;
+function tagsOf(n){ const out = new Set(); let m; const s = textOf(n); TAG.lastIndex = 0; while ((m = TAG.exec(s))) out.add(m[2]); return Array.from(out); }
 function linksOf(n){
-  const out = new Set(n.links || []);
-  let m; WIKI.lastIndex = 0;
+  if (sealed(n)) return [];
+  const out = new Set(n.links || []); let m; WIKI.lastIndex = 0;
   while ((m = WIKI.exec(n.text || ""))) { const t = byTitle(m[1]); if (t && t.id !== n.id) out.add(t.id); }
-  return Array.from(out).filter(id => byId(id));
+  return Array.from(out).filter(id => { const x = byId(id); return x && !sealed(x); });
 }
-const backlinksOf = n => notes().filter(x => x.id !== n.id && linksOf(x).includes(n.id));
+const backlinksOf = n => sealed(n) ? [] : notes().filter(x => x.id !== n.id && linksOf(x).includes(n.id));
 const degree = n => new Set(linksOf(n).concat(backlinksOf(n).map(x => x.id))).size;
 const sleeping = n => n.snoozeUntil && n.snoozeUntil > today();
+const live = n => !n.archived;
 
+/* ───── リマインダー ───── */
+const remOf = n => (kindOf(n) === "リマインダー" && n.remind) ? n.remind : null;
+function remBuckets(){
+  const d = today(), soon = addDays(d, 7), over = [], now = [], next = [];
+  for (const n of notes()) { const r = remOf(n); if (!r || r.done || !live(n) || !r.date) continue;
+    if (r.date < d) over.push(n); else if (r.date === d) now.push(n); else if (r.date <= soon) next.push(n); }
+  const key = n => n.remind.date + " " + (n.remind.time || "99:99");
+  [over, now, next].forEach(a => a.sort((x, y) => key(x) < key(y) ? -1 : 1));
+  return { over, now, next };
+}
+function nextDate(r){
+  const step = d => r.repeat === "日" ? addDays(d, 1) : r.repeat === "週" ? addDays(d, 7) : addMonths(d, 1);
+  let d = step(r.date); while (d <= today()) d = step(d); return d;
+}
+const remWhen = r => (r.date === today() ? "今日" : r.date === addDays(today(), 1) ? "明日" : md(r.date)) + (r.time ? " " + r.time : "") + (r.repeat ? "・毎" + r.repeat : "");
+function calendarUrl(n){
+  const r = n.remind, dd = r.date.replace(/-/g, "");
+  let dates;
+  if (r.time) { const [h, mi] = r.time.split(":").map(Number); const end = new Date(Date.UTC(2000, 0, 1, h, mi + 30));
+    dates = dd + "T" + r.time.replace(":", "") + "00/" + dd + "T" + String(end.getUTCHours()).padStart(2, "0") + String(end.getUTCMinutes()).padStart(2, "0") + "00"; }
+  else dates = dd + "/" + addDays(r.date, 1).replace(/-/g, "");
+  const rec = r.repeat ? "&recur=" + encodeURIComponent("RRULE:FREQ=" + ({ "日": "DAILY", "週": "WEEKLY", "月": "MONTHLY" })[r.repeat]) : "";
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(titleOf(n)) + "&dates=" + dates +
+    "&details=" + encodeURIComponent(textOf(n).split("\n").slice(1).join("\n").slice(0, 500)) + "&ctz=Asia%2FTokyo" + rec;
+}
+
+/* ───── 金庫(暗号) ─────
+   中身はデータ鍵(AES-GCM)で暗号化して保存する。データ鍵は「合言葉」と「予備の鍵」それぞれから作った鍵で包んで2通り置く。
+   どちらか1本あれば開く。合言葉も予備の鍵も、どこにも保存しない。 */
+const te = new TextEncoder(), td = new TextDecoder();
+const b64 = buf => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const ITER = () => window.__shianIter || 210000;
+async function kek(secret, salt){
+  const base = await crypto.subtle.importKey("raw", te.encode(secret), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: ITER(), hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function wrapRaw(raw, secret){
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const k = await kek(secret, salt);
+  return { salt: b64(salt), iv: b64(iv), data: b64(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k, raw)), iter: ITER() };
+}
+async function unwrapRaw(w, secret){
+  const salt = unb64(w.salt), iv = unb64(w.iv);
+  const base = await crypto.subtle.importKey("raw", te.encode(secret), "PBKDF2", false, ["deriveKey"]);
+  const k = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: w.iter || ITER(), hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, k, unb64(w.data)));
+}
+const dataKey = raw => crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+function newRecoveryKey(){
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", b = crypto.getRandomValues(new Uint8Array(24));
+  let s = ""; for (let i = 0; i < 24; i++) { s += A[b[i] % A.length]; if (i % 4 === 3 && i < 23) s += "-"; } return s;
+}
+const normKey = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+async function seal(obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  return { iv: b64(iv), data: b64(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, state.vaultKey, te.encode(JSON.stringify(obj)))) };
+}
+async function unseal(s){ return JSON.parse(td.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(s.iv) }, state.vaultKey, unb64(s.data)))); }
+async function openVault(secret, byRecovery){
+  const v = state.doc.vault; if (!v) throw new Error("金庫はまだありません");
+  let raw;
+  try { raw = byRecovery ? await unwrapRaw(v.rec, normKey(secret)) : await unwrapRaw(v.pass, secret); }
+  catch (e) { throw new Error(byRecovery ? "予備の鍵が違います" : "合言葉が違います"); }
+  state.vaultKey = await dataKey(raw); state.vaultRaw = raw;
+  state.unsealed = {};
+  for (const n of notes()) if (sealed(n)) { try { state.unsealed[n.id] = await unseal(n.sealed); } catch (e) {} }
+  clearTimeout(state.lockTimer); state.lockTimer = setTimeout(lockVault, LOCK_MS);
+}
+function lockVault(){ state.vaultKey = null; state.vaultRaw = null; state.unsealed = {}; state.revealed = {}; clearTimeout(state.lockTimer); render(); }
+async function createVault(pass){
+  const raw = crypto.getRandomValues(new Uint8Array(32)), rec = newRecoveryKey();
+  const vault = { v: 1, pass: await wrapRaw(raw, pass), rec: await wrapRaw(raw, normKey(rec)), created: today() };
+  state.vaultKey = await dataKey(raw); state.vaultRaw = raw;
+  return { vault, rec };
+}
+
+/* ───── 本文の表示(見出し・箇条書き・チェックリスト・リンク・タグ・[[つながり]]) ───── */
+function inline(s){
+  let h = esc(s);
+  h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/\[\[([^\]\n]+)\]\]/g, (m, t) => { const raw = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    return '<span class="wl' + (byTitle(raw) ? "" : " missing") + '" data-wl="' + t + '">' + t + "</span>"; });
+  h = h.replace(/(^|[\s　])#([^\s#　,、。<]+)/g, (m, sp, t) => sp + '<span class="tag" data-tag="' + t + '">#' + t + "</span>");
+  return h;
+}
+function renderBody(n, editable){
+  const lines = textOf(n).split("\n"), out = ['<span class="ttl">' + esc(titleOf(n)) + "</span>"];
+  let inCode = false, code = [];
+  lines.slice(1).forEach((ln, i) => {
+    const idx = i + 1;
+    if (/^```/.test(ln)) { if (inCode) { out.push('<pre class="code">' + esc(code.join("\n")) + "</pre>"); code = []; } inCode = !inCode; return; }
+    if (inCode) { code.push(ln); return; }
+    let m;
+    if ((m = /^\s*- \[( |x|X)\] (.*)$/.exec(ln))) { const done = m[1] !== " ";
+      out.push('<label class="cl' + (done ? " done" : "") + '"><input type="checkbox" data-cl="' + idx + '"' + (done ? " checked" : "") + (editable ? "" : " disabled") + "><span>" + inline(m[2]) + "</span></label>"); return; }
+    if ((m = /^#{1,3} (.*)$/.exec(ln))) { out.push('<span class="h">' + inline(m[1]) + "</span>"); return; }
+    if ((m = /^\s*[-・*] (.*)$/.exec(ln))) { out.push('<span class="li">・' + inline(m[1]) + "</span>"); return; }
+    out.push('<span class="p">' + inline(ln) + "</span>");
+  });
+  if (inCode && code.length) out.push('<pre class="code">' + esc(code.join("\n")) + "</pre>");
+  return out.join("");
+}
 /* ───── GitHub ───── */
 function b64e(str){ const b = new TextEncoder().encode(str); let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
 function b64d(b64){ const bin = atob(String(b64).replace(/\s/g, "")); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
@@ -217,13 +359,14 @@ async function writeJson(path, obj, sha, msg){
   return (await r.json()).content.sha;
 }
 function say(id, t, err){ const el = document.getElementById(id); if (el) { el.textContent = t; el.classList.toggle("err", !!err); } }
-
+function normDoc(d){ d = (d && d.notes) ? d : { version: 2, notes: [] }; d.shelves = d.shelves && d.shelves.length ? d.shelves : DEFAULT_SHELVES.slice(); return d; }
 async function load(){
   if (!state.conn || !state.conn.token) { show("settings"); return false; }
   say("conn-status", "読み込んでいます…");
   try {
     const r = await readJson(PATH);
-    state.doc = (r.data && r.data.notes) ? r.data : { version: 1, notes: [] }; state.sha = r.sha;
+    state.doc = normDoc(r.data); state.sha = r.sha;
+    if (state.vaultKey) { for (const n of notes()) if (sealed(n)) { try { state.unsealed[n.id] = await unseal(n.sealed); } catch (e) {} } }
     lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha });
     say("conn-status", "読み込みました"); render(); return true;
   } catch (e) { say("conn-status", e.message, true); say("home-status", e.message, true); return false; }
@@ -236,97 +379,206 @@ async function commit(mutate, statusId){
     try { state.sha = await writeJson(PATH, state.doc, state.sha); lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha }); return true; }
     catch (e) {
       if ((e.status === 409 || e.status === 422) && i < 2) {
-        const fresh = await readJson(PATH);
-        state.doc = (fresh.data && fresh.data.notes) ? fresh.data : { version: 1, notes: [] }; state.sha = fresh.sha;
-        mutate(state.doc); render(); continue;
+        const fresh = await readJson(PATH); state.doc = normDoc(fresh.data); state.sha = fresh.sha; mutate(state.doc); render(); continue;
       }
       say(statusId || "home-status", e.message || "保存できませんでした(端末には残っています)", true); return false;
     }
   }
   return false;
 }
-function newNote(text, extra){
-  const n = Object.assign({ id: uid(), text, stage: "種", created: today(), updated: new Date().toISOString(), links: [] }, extra || {});
-  return n;
-}
+const mut = (id, f) => doc => { const x = doc.notes.find(y => y.id === id); if (x) { f(x); x.updated = new Date(nowMs()).toISOString(); } };
+function newNote(text, extra){ return Object.assign({ id: uid(), text, kind: "思案", stage: "種", created: today(), updated: new Date(nowMs()).toISOString(), links: [], inbox: true }, extra || {}); }
 
 /* ───── 描画 ───── */
+function dotColor(n){ const k = kindOf(n); return k === "思案" ? (STAGE_COLOR[n.stage] || STAGE_COLOR["種"]) : (sealed(n) ? "#C9A227" : KIND_COLOR[k]); }
 function row(n){
-  const d = degree(n);
-  return '<button type="button" class="note-row" data-open="' + esc(n.id) + '"><i class="dot s-' + esc(n.stage) + '"></i><span class="t">' + esc(titleOf(n)) +
-    '</span><span class="m">' + (d ? "つながり " + d + "　" : "") + (sleeping(n) ? "寝かせ中〜" + esc(n.snoozeUntil.slice(5)) : esc(n.created.slice(5))) + "</span></button>";
+  const d = degree(n), r = remOf(n);
+  const meta = r && !r.done ? remWhen(r) : sleeping(n) ? "寝かせ中〜" + md(n.snoozeUntil) : (kindOf(n) === "書庫" ? n.shelf : (d ? "つながり " + d + "　" : "") + md(n.created));
+  return '<button type="button" class="note-row" data-open="' + esc(n.id) + '"><i class="dot" style="color:' + dotColor(n) + ";background:" + dotColor(n) + '"></i><span class="t">' +
+    (n.pinned ? "📌 " : "") + esc(titleOf(n)) + '</span><span class="m">' + esc(meta) + "</span></button>";
+}
+function remRow(n, over){
+  return '<div class="rem' + (over ? " over" : "") + '"><button type="button" class="chk" data-rem-done="' + esc(n.id) + '" aria-label="済み"></button>' +
+    '<div class="t" data-open="' + esc(n.id) + '">' + esc(titleOf(n)) + '<div class="when">' + esc(remWhen(n.remind)) + "</div></div>" +
+    '<button type="button" class="btn quiet sm" data-rem-later="' + esc(n.id) + '">明日へ</button></div>';
+}
+function renderKinds(){
+  const k = lsGet(KEY_KIND, "思案");
+  document.getElementById("cap-kinds").innerHTML = KINDS.map(x => '<button type="button" data-capkind="' + x + '" aria-pressed="' + (x === k) + '">' + x + "</button>").join("");
 }
 function renderHome(){
-  const all = notes();
+  const all = notes().filter(live);
+  const B = remBuckets();
+  const inbox = all.filter(n => n.inbox && !sleeping(n) && kindOf(n) !== "書庫").sort((a, b) => (a.updated < b.updated ? 1 : -1));
+  const pins = all.filter(n => n.pinned && !sealed(n));
   const woke = all.filter(n => n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen);
-  const awake = all.filter(n => !sleeping(n));
-  const old = awake.filter(n => n.created < addDays(today(), -2));
-  const pick = old.length ? old[(Date.parse(today()) / 864e5) % old.length | 0] : null;   // 1日1つ、日替わり
-  const recent = awake.slice().sort((a, b) => (a.updated < b.updated ? 1 : -1)).slice(0, 8);
+  const old = all.filter(n => kindOf(n) === "思案" && !sleeping(n) && n.created < addDays(today(), -2));
+  const pick = old.length ? old[(Date.parse(today()) / 864e5) % old.length | 0] : null;
+  const recent = all.filter(n => !sleeping(n) && !n.inbox && !sealed(n)).sort((a, b) => (a.updated < b.updated ? 1 : -1)).slice(0, 8);
   document.getElementById("home").innerHTML =
+    (B.over.length ? '<div class="card alert"><h2>期限を過ぎたリマインダー</h2>' + B.over.map(n => remRow(n, true)).join("") + "</div>" : "") +
+    (B.now.length ? '<div class="card"><h2>今日のリマインダー</h2>' + B.now.map(n => remRow(n)).join("") + "</div>" : "") +
+    (B.next.length ? '<div class="card"><h2>これから(1週間)</h2>' + B.next.map(n => remRow(n)).join("") + "</div>" : "") +
+    (pins.length ? '<div class="card"><h2>ピン留め</h2>' + pins.map(row).join("") + "</div>" : "") +
+    (inbox.length ? '<div class="card"><h2><span>受信箱 ' + inbox.length + '</span><button type="button" class="btn quiet sm" data-inbox-all>全部整理済みにする</button></h2>' + inbox.map(row).join("") + "</div>" : "") +
     (woke.length ? '<div class="card"><h2>寝かせ明け</h2>' + woke.map(row).join("") + "</div>" : "") +
     (pick ? '<div class="card"><h2>再会</h2>' + row(pick) + "</div>" : "") +
-    '<div class="card"><h2>最近の思案</h2>' + (recent.length ? recent.map(row).join("") : '<div class="empty">まだ何もありません。上の欄に、思いついたことを書いてみてください。</div>') + "</div>";
+    '<div class="card"><h2>最近</h2>' + (recent.length ? recent.map(row).join("") : '<div class="empty">上の欄に、思いついたことや覚えておくことを書いてみてください。</div>') + "</div>";
 }
-function renderList(){
-  const q = (document.getElementById("q").value || "").trim().toLowerCase(), fs = document.getElementById("fs").value;
-  const list = notes().filter(n => (!q || (n.text || "").toLowerCase().includes(q)) &&
-    (!fs || (fs === "寝かせ中" ? sleeping(n) : n.stage === fs && !sleeping(n))))
-    .sort((a, b) => (a.updated < b.updated ? 1 : -1));
-  document.getElementById("list").innerHTML = '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">ありません。</div>') + "</div>";
+function renderSearch(){
+  const q = (document.getElementById("q").value || "").trim().toLowerCase(), fk = document.getElementById("fk").value, fs = document.getElementById("fs").value;
+  const tags = {}; notes().filter(live).forEach(n => tagsOf(n).forEach(t => tags[t] = (tags[t] || 0) + 1));
+  document.getElementById("tagbar").innerHTML = Object.entries(tags).sort((a, b) => b[1] - a[1]).map(([t, c]) =>
+    '<button type="button" data-tagf="' + esc(t) + '" aria-pressed="' + (state.tag === t) + '">#' + esc(t) + " " + c + "</button>").join("");
+  const hay = n => (textOf(n) + "\n" + ((plainOf(n) || {}).fields || []).map(f => f.k + " " + f.v).join("\n") + "\n" + (n.shelf || "")).toLowerCase();
+  const list = notes().filter(n => (fs === "archived" ? n.archived : live(n)) && (!sealed(n) || state.unsealed[n.id]) &&
+    (!q || hay(n).includes(q)) && (!fk || kindOf(n) === fk) && (!state.tag || tagsOf(n).includes(state.tag)) &&
+    (!fs || fs === "archived" || (fs === "pin" ? n.pinned : fs === "inbox" ? n.inbox : fs === "sleep" ? sleeping(n) : true)))
+    .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || (a.updated < b.updated ? 1 : -1));
+  document.getElementById("results").innerHTML = '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">見つかりません。</div>') + "</div>";
 }
-function renderBody(n){
-  const lines = (n.text || "").split("\n");
-  const html = esc(lines.slice(1).join("\n")).replace(/\[\[([^\]\n]+)\]\]/g, (m, t) => {
-    const raw = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-    const hit = byTitle(raw);
-    return '<span class="wl' + (hit ? "" : " missing") + '" data-wl="' + t + '">' + t + "</span>";
-  });
-  return '<span class="ttl">' + esc(titleOf(n)) + "</span>" + html;
+function fieldsHtml(n, p){
+  const secret = n.shelf === VAULT;
+  return (p.fields || []).map((f, i) => { const key = n.id + ":" + i, show = !secret || state.revealed[key];
+    return '<div class="field"><span class="k">' + esc(f.k) + '</span><span class="v' + (show ? "" : " hide") + '">' + (show ? esc(f.v) : "••••••••") + "</span>" +
+      (secret ? '<button type="button" class="btn quiet sm" data-reveal="' + esc(key) + '">' + (show ? "隠す" : "見る") + "</button>" : "") +
+      '<button type="button" class="btn ghost sm" data-copy="' + i + '">写す</button></div>'; }).join("");
 }
 function renderNote(){
   const n = byId(state.open), box = document.getElementById("note");
   if (!n) { box.innerHTML = ""; return; }
+  const p = plainOf(n), k = kindOf(n);
+  if (!p) { box.innerHTML = '<button type="button" class="back" data-back>‹ もどる</button><div class="card"><p>金庫のものです。書庫の金庫で開けると見られます。</p><button type="button" class="btn sm" data-goto-vault>金庫を開ける</button></div>'; return; }
+  const isLib = k === "書庫";
   const outs = linksOf(n).map(byId), backs = backlinksOf(n);
-  const others = notes().filter(x => x.id !== n.id && !outs.includes(x)).sort((a, b) => titleOf(a).localeCompare(titleOf(b), "ja"));
-  box.innerHTML = '<button type="button" class="back" data-back>‹ もどる</button>' +
-    (state.edit
-      ? '<textarea class="body" id="n-text" aria-label="本文">' + esc(n.text) + '</textarea><p style="font-size:.78rem;color:var(--sub);margin:.3rem 0">1行目が名前。[[別の思案の名前]] と書くとつながる。</p>' +
-        '<div style="display:flex;gap:.5rem;align-items:center"><button type="button" class="btn sm" data-save>保存</button><button type="button" class="btn quiet sm" data-cancel>やめる</button><span class="status" id="note-status"></span></div>'
-      : '<div class="render" data-edit title="押すと書ける">' + renderBody(n) + "</div>") +
-    '<div class="stages" role="group" aria-label="段階">' + STAGES.map(s => '<button type="button" class="b-' + s + '" data-stage="' + s + '" aria-pressed="' + (n.stage === s) + '">' + s + "</button>").join("") + "</div>" +
-    (n.prompt ? '<div class="prompt">問い:' + esc(n.prompt) + "</div>" : "") +
-    '<div class="tools">' +
-      '<button type="button" class="btn ghost sm" data-ask>問いかける</button>' +
-      '<select id="ask-pick" aria-label="問いを選ぶ" style="background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.25rem;max-width:12rem">' +
-        '<option value="">問いを選ぶ…</option>' + promptPool(false).map(p => '<option value="' + esc(p.id) + '">' + (p.mine ? "★ " : "") + esc(p.text) + "</option>").join("") + "</select>" +
-      '<button type="button" class="btn ghost sm" data-ask-pick>この問いで</button>' +
-      '<button type="button" class="btn ghost sm" data-sleep="3">3日寝かせる</button><button type="button" class="btn ghost sm" data-sleep="7">1週間寝かせる</button>' +
-      (n.snoozeUntil ? '<button type="button" class="btn quiet sm" data-wake>起こす</button>' : "") +
-    "</div>" +
-    (n.stage === "構想" || n.stage === "実行へ" ? '<div class="tools"><button type="button" class="btn sm" data-to-task>タスクにする</button><button type="button" class="btn sm" data-to-agenda>常任評議会の議題にする</button></div>' : "") +
-    (n.sent ? '<p style="font-size:.8rem;color:var(--sub)">' + esc(n.sent) + "</p>" : "") +
-    '<div class="card"><h2>つないでいる思案 ' + outs.length + "</h2>" + (outs.length ? outs.map(row).join("") : '<div class="empty">まだありません。</div>') +
+  const others = isLib && sealed(n) ? [] : notes().filter(x => x.id !== n.id && !sealed(x) && live(x) && !outs.includes(x)).sort((a, b) => titleOf(a).localeCompare(titleOf(b), "ja"));
+  let h = '<button type="button" class="back" data-back>‹ もどる</button>';
+  if (state.edit) {
+    h += '<textarea class="body" id="n-text" aria-label="本文">' + esc(p.text) + "</textarea>" +
+      '<p style="font-size:.76rem;color:var(--sub);margin:.3rem 0">1行目が名前。「# 見出し」「- 箇条書き」「- [ ] チェック」「```(コード)```」「#タグ」「[[別のものの名前]]」が使えます。</p>' +
+      (isLib ? '<div class="f"><label>項目(名前と値。値の横の「写す」で取り出せる)</label><div id="fedit">' + (p.fields || []).map((f, i) =>
+          '<div class="fedit"><input data-fk="' + i + '" value="' + esc(f.k) + '" placeholder="項目名"><input data-fv="' + i + '" value="' + esc(f.v) + '" placeholder="値"' + (n.shelf === VAULT ? ' type="password"' : "") + '><button type="button" class="btn quiet sm" data-fdel="' + i + '">外す</button></div>').join("") +
+        '</div><button type="button" class="btn quiet sm" data-fadd>項目を足す</button></div>' : "") +
+      '<div style="display:flex;gap:.5rem;align-items:center;margin-top:.6rem"><button type="button" class="btn sm" data-save>保存</button><button type="button" class="btn quiet sm" data-cancel>やめる</button><span class="status" id="note-status"></span></div>';
+  } else {
+    h += '<div class="render" data-edit title="押すと書ける">' + (isLib && n.shelf === "コード" ? '<span class="ttl">' + esc(titleOf(n)) + '</span><pre class="code">' + esc(p.text.split("\n").slice(1).join("\n")) + "</pre>" : renderBody(n, true)) + "</div>" +
+      (isLib ? '<div class="card">' + (fieldsHtml(n, p) || '<div class="empty">項目はまだありません。本文を押して足せます。</div>') +
+        (n.shelf === "コード" ? '<div style="margin-top:.4rem"><button type="button" class="btn ghost sm" data-copy-body>コードを写す</button></div>' : "") + "</div>" : "");
+  }
+  // 共通の操作
+  h += '<div class="row-btns">' +
+    (isLib ? '<span class="pill">' + esc(n.shelf) + "</span>" : '<select id="kind-sel" aria-label="種類" style="background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.2rem .4rem">' + KINDS.map(x => "<option" + (x === k ? " selected" : "") + ">" + x + "</option>").join("") + "</select>") +
+    '<button type="button" class="btn quiet sm" data-pin>' + (n.pinned ? "ピンを外す" : "ピン留め") + "</button>" +
+    (n.inbox ? '<button type="button" class="btn quiet sm" data-tidy>整理済みにする</button>' : "") +
+    '<button type="button" class="btn quiet sm" data-archive>' + (n.archived ? "しまったものから戻す" : "しまう") + "</button></div>";
+  if (k === "リマインダー") {
+    const r = n.remind || {};
+    h += '<div class="card"><h2>リマインダー</h2>' + (r.done ? '<p>済み(' + esc(r.doneAt || "") + ')</p><button type="button" class="btn quiet sm" data-rem-undo>済みを取り消す</button>' :
+      '<div class="row-btns">' + [["今日", today()], ["明日", addDays(today(), 1)], ["今週末", addDays(today(), (6 - new Date(today() + "T00:00:00Z").getUTCDay() + 7) % 7 || 7)], ["来週", addDays(today(), 7)]]
+        .map(([l, d]) => '<button type="button" class="pill" data-rq="' + d + '">' + l + "</button>").join("") + "</div>" +
+      '<div class="grid2"><div class="f"><label>日付</label><input id="r-date" type="date" value="' + esc(r.date || "") + '"></div><div class="f"><label>時刻(任意)</label><input id="r-time" type="time" value="' + esc(r.time || "") + '"></div>' +
+      '<div class="f"><label>繰り返し</label><select id="r-rep">' + [["", "なし"], ["日", "毎日"], ["週", "毎週"], ["月", "毎月"]].map(([v, l]) => '<option value="' + v + '"' + ((r.repeat || "") === v ? " selected" : "") + ">" + l + "</option>").join("") + "</select></div></div>" +
+      '<label style="display:flex;gap:.4rem;align-items:center;margin:.5rem 0;font-size:.88rem"><input type="checkbox" id="r-road"' + (r.roadmap ? " checked" : "") + '> 行軍表の今日のタブにも出す</label>' +
+      '<div class="row-btns"><button type="button" class="btn sm" data-rem-save>期日を保存</button>' + (r.date ? '<button type="button" class="btn ghost sm" data-rem-done="' + esc(n.id) + '">済みにする</button>' +
+        '<a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="' + esc(calendarUrl(n)) + '">カレンダーに入れる(通知)</a>' : "") + "</div>" +
+      '<p style="font-size:.76rem;color:var(--sub)">通知はスマホのカレンダーが鳴らします。「カレンダーに入れる」で予定を作って保存してください。</p>') + "</div>";
+  }
+  if (k === "思案") {
+    const pool = promptPool(false);
+    h += '<div class="stages" role="group" aria-label="段階">' + STAGES.map(s => '<button type="button" data-stage="' + s + '" aria-pressed="' + (n.stage === s) + '">' + s + "</button>").join("") + "</div>" +
+      (n.prompt ? '<div class="prompt">問い:' + esc(n.prompt) + "</div>" : "") +
+      '<div class="row-btns"><button type="button" class="btn ghost sm" data-ask>問いかける</button><select id="ask-pick" aria-label="問いを選ぶ" style="background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.25rem;max-width:12rem">' +
+        '<option value="">問いを選ぶ…</option>' + pool.map(x => '<option value="' + esc(x.id) + '">' + (x.mine ? "★ " : "") + esc(x.text) + "</option>").join("") + "</select>" +
+        '<button type="button" class="btn ghost sm" data-ask-pick>この問いで</button></div>' +
+      '<div class="row-btns"><button type="button" class="btn ghost sm" data-sleep="3">3日寝かせる</button><button type="button" class="btn ghost sm" data-sleep="7">1週間寝かせる</button>' +
+        (n.snoozeUntil ? '<button type="button" class="btn quiet sm" data-wake>起こす</button>' : "") + "</div>" +
+      (n.stage === "構想" || n.stage === "実行へ" ? '<div class="row-btns"><button type="button" class="btn sm" data-to-task>タスクにする</button><button type="button" class="btn sm" data-to-agenda>常任評議会の議題にする</button></div>' : "") +
+      (n.sent ? '<p style="font-size:.8rem;color:var(--sub)">' + esc(n.sent) + "</p>" : "");
+  }
+  if (!sealed(n)) {
+    h += '<div class="card"><h2>つないでいるもの ' + outs.length + "</h2>" + (outs.length ? outs.map(row).join("") : '<div class="empty">まだありません。</div>') +
       (others.length ? '<div style="display:flex;gap:.4rem;margin-top:.5rem"><select id="link-to" style="flex:1;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.35rem">' +
         others.map(o => '<option value="' + esc(o.id) + '">' + esc(titleOf(o)) + "</option>").join("") + '</select><button type="button" class="btn ghost sm" data-link>つなぐ</button></div>' : "") + "</div>" +
-    '<div class="card"><h2>この思案を指している ' + backs.length + "</h2>" + (backs.length ? backs.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>" +
-    '<div style="margin-top:1rem"><button type="button" class="btn quiet sm" data-del>この思案を消す</button></div><span class="status" id="note-status2"></span>';
+      '<div class="card"><h2>これを指している ' + backs.length + "</h2>" + (backs.length ? backs.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>";
+  }
+  h += '<div style="margin-top:1rem"><button type="button" class="btn danger sm" data-del>消す</button></div><span class="status" id="note-status2"></span>';
+  box.innerHTML = h;
+}
+function renderLib(){
+  const box = document.getElementById("lib");
+  const shelves = state.doc.shelves || DEFAULT_SHELVES;
+  if (!state.shelf) {
+    const count = s => notes().filter(n => live(n) && kindOf(n) === "書庫" && n.shelf === s).length;
+    box.innerHTML = "<h1>書庫</h1>" + '<div class="filters"><input type="search" id="lib-q" placeholder="書庫を探す"></div><div id="lib-hits"></div>' +
+      '<div class="shelves">' + shelves.map(s => '<button type="button" class="shelf' + (s === VAULT ? " vault" : "") + '" data-shelf="' + esc(s) + '"><b>' + (s === VAULT ? "🔒 " : "") + esc(s) + "</b><span>" +
+        count(s) + "件" + (s === VAULT ? (state.vaultKey ? "・開いています" : state.doc.vault ? "・閉じています" : "・まだ作っていません") : "") + "</span></button>").join("") + "</div>" +
+      '<div class="qadd"><input id="shelf-new" placeholder="新しい棚(例:アカウント、レシピ)"><button type="button" class="btn sm" data-shelf-add>棚を足す</button></div>';
+    return;
+  }
+  const s = state.shelf, isVault = s === VAULT;
+  let h = '<button type="button" class="back" data-shelf-back>‹ 書庫</button><h1>' + (isVault ? "🔒 " : "") + esc(s) + "</h1>";
+  if (isVault && !state.doc.vault) h += '<div class="card"><p>金庫はまだありません。設定で合言葉を決めて作ってください。</p><button type="button" class="btn sm" data-goto-settings>設定へ</button></div>';
+  else if (isVault && !state.vaultKey) h += '<div class="card"><h2>金庫を開ける</h2><div class="f"><label id="ul-label">合言葉</label><input id="ul-secret" type="password" autocomplete="off"></div>' +
+      '<div class="row-btns"><button type="button" class="btn sm" data-unlock>開ける</button><label style="font-size:.84rem;display:flex;gap:.3rem;align-items:center"><input type="checkbox" id="ul-rec"> 予備の鍵で開ける</label></div><span class="status" id="ul-status"></span></div>';
+  else {
+    const list = notes().filter(n => live(n) && kindOf(n) === "書庫" && n.shelf === s).sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || titleOf(a).localeCompare(titleOf(b), "ja"));
+    h += '<div class="row-btns"><button type="button" class="btn sm" data-entry-new>項目を足す</button>' + (isVault ? '<button type="button" class="btn quiet sm" data-lock>金庫を閉じる</button>' : "") + "</div>" +
+      '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>";
+  }
+  box.innerHTML = h;
+}
+function renderLibHits(){
+  const q = ((document.getElementById("lib-q") || {}).value || "").trim().toLowerCase(), el = document.getElementById("lib-hits"); if (!el) return;
+  if (!q) { el.innerHTML = ""; return; }
+  const hits = notes().filter(n => live(n) && kindOf(n) === "書庫" && plainOf(n) && (textOf(n) + " " + (plainOf(n).fields || []).map(f => f.k + " " + f.v).join(" ")).toLowerCase().includes(q));
+  el.innerHTML = '<div class="card">' + (hits.length ? hits.map(row).join("") : '<div class="empty">見つかりません。</div>') + "</div>";
+}
+function renderVaultSettings(){
+  const el = document.getElementById("vault-settings"); if (!el) return;
+  const v = state.doc.vault;
+  if (state.newKey) { el.innerHTML = '<p>これが<b>予備の鍵</b>です。表示はこの1回だけです。Googleのパスワードマネージャー(「思案の金庫」という名前で)か、紙に控えてください。合言葉を忘れたときは、これで開けます。</p>' +
+      '<div class="key" id="rec-key">' + esc(state.newKey) + '</div><div class="row-btns"><button type="button" class="btn ghost sm" data-copy-key>写す</button><button type="button" class="btn sm" data-key-done>控えました</button></div>'; return; }
+  if (!v) { el.innerHTML = '<p style="font-size:.86rem;color:var(--sub)">合言葉は好きなものを決められます。合言葉と、自動で作る予備の鍵のどちらか1本で開きます。どちらもどこにも保存されません。</p>' +
+      '<div class="grid2"><div class="f"><label>合言葉</label><input id="v-p1" type="password" autocomplete="new-password"></div><div class="f"><label>もう一度</label><input id="v-p2" type="password" autocomplete="new-password"></div></div>' +
+      '<div class="row-btns"><button type="button" class="btn sm" data-vault-create>金庫を作る</button></div><span class="status" id="v-status"></span>'; return; }
+  el.innerHTML = "<p>金庫は" + (state.vaultKey ? "<b>開いています</b>(10分で自動で閉じます)" : "閉じています") + "。</p>" + (state.vaultKey
+    ? '<div class="grid2"><div class="f"><label>新しい合言葉</label><input id="v-n1" type="password" autocomplete="new-password"></div><div class="f"><label>もう一度</label><input id="v-n2" type="password" autocomplete="new-password"></div></div>' +
+      '<div class="row-btns"><button type="button" class="btn sm" data-pass-change>合言葉を変える</button><button type="button" class="btn ghost sm" data-rec-renew>予備の鍵を作り直す</button><button type="button" class="btn quiet sm" data-lock>閉じる</button></div><span class="status" id="v-status"></span>'
+    : '<p style="font-size:.86rem;color:var(--sub)">合言葉を変えるときは、書庫の金庫を開けてから(合言葉を忘れたら、予備の鍵で開けられます)。</p><button type="button" class="btn sm" data-goto-vault>金庫を開ける</button>');
 }
 function render(){
-  renderHome(); renderList(); renderPrompts();
+  renderKinds(); renderHome(); renderSearch(); renderLib(); renderPrompts(); renderVaultSettings();
   if (state.view === "note") renderNote();
   if (state.view === "graph") G.start();
 }
 function show(v){
   state.view = v;
   document.querySelectorAll(".view").forEach(el => el.hidden = el.id !== "view-" + v);
-  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v || (v === "note" && b.dataset.view === "home"))));
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v || (v === "note" && b.dataset.view === state.backTo))));
   if (v === "graph") G.start(); else G.stop();
   if (v === "note") renderNote();
   window.scrollTo(0, 0);
 }
 function openNote(id, edit){ if (state.view !== "note") state.backTo = state.view; state.open = id; state.edit = !!edit; show("note"); }
 
+/* ───── 問いの束 ───── */
+function promptPool(includeOff){
+  const off = new Set(state.doc.promptsOff || []);
+  const base = PROMPTS.map(t => ({ id: "base:" + t, text: t, mine: false, off: off.has(t) }));
+  const mine = (state.doc.prompts || []).map(p => ({ id: p.id, text: p.text, mine: true, off: !!p.off }));
+  const all = mine.concat(base);
+  return includeOff ? all : all.filter(p => !p.off);
+}
+function renderPrompts(){
+  const ul = document.getElementById("qlist"); if (!ul) return;
+  ul.innerHTML = promptPool(true).map(p => '<li class="' + (p.off ? "off" : "") + '"><span class="qt">' + esc(p.text) + "</span>" + (p.mine ? '<span class="mine">自分</span>' : "") +
+    '<button type="button" class="btn quiet sm" data-q-toggle="' + esc(p.id) + '">' + (p.off ? "戻す" : "外す") + "</button>" +
+    (p.mine ? '<button type="button" class="btn quiet sm" data-q-del="' + esc(p.id) + '">消す</button>' : "") + "</li>").join("");
+}
+async function copyText(t, statusId){
+  try { await navigator.clipboard.writeText(t); say(statusId || "note-status2", "写しました"); }
+  catch (e) { say(statusId || "note-status2", "写せませんでした。長押しで選んで写してください。", true); }
+}
 /* ───── 行軍表・常任評議会へ送る ───── */
 async function sha1Id(name, date){
   const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(name.trim() + "|" + date));
@@ -366,7 +618,7 @@ const G = (() => {
   let nodes = [], edges = [], raf = null, view = { x: 0, y: 0, k: 1 }, drag = null, alpha = 1, w = 0, h = 0, dpr = 1, pointers = new Map(), pinch = null;
   const pos = {};   // 位置を覚えておく(開き直しても動かない)
   function build(){
-    const ns = notes();
+    const ns = notes().filter(n => live(n) && !sealed(n));
     nodes = ns.map(n => {
       const p = pos[n.id] || (pos[n.id] = { x: (rnd(1000) - 500) / 3, y: (rnd(1000) - 500) / 3, vx: 0, vy: 0 });
       return { id: n.id, n, p, r: 5 + Math.min(14, Math.sqrt(degree(n)) * 4) };
@@ -412,7 +664,7 @@ const G = (() => {
     g.lineWidth = 1; g.strokeStyle = "rgba(157,184,255,0.28)";
     for (const [i, j] of edges) { const [x1, y1] = toScreen(nodes[i].p), [x2, y2] = toScreen(nodes[j].p); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
     for (const nd of nodes) {
-      const [x, y] = toScreen(nd.p), r = nd.r * Math.sqrt(view.k), col = COLOR[nd.n.stage] || COLOR["種"];
+      const [x, y] = toScreen(nd.p), r = nd.r * Math.sqrt(view.k), col = dotColor(nd.n);
       g.globalAlpha = sleeping(nd.n) ? 0.35 : 1;
       g.shadowColor = col; g.shadowBlur = 12; g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.shadowBlur = 0;
       if (view.k > 0.7 || nd.r > 9) { g.fillStyle = "rgba(232,230,242,0.9)"; g.font = (11 + Math.min(4, nd.r / 4)) + "px 'Zen Maru Gothic',sans-serif"; g.textAlign = "center";
@@ -466,116 +718,205 @@ const G = (() => {
 
 /* ───── 操作 ───── */
 function bind(){
-  document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => { render(); show(b.dataset.view); }));
+  document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => { if (b.dataset.view === "lib") state.shelf = null; render(); show(b.dataset.view); }));
+  document.getElementById("cap-kinds").addEventListener("click", e => { const b = e.target.closest("[data-capkind]"); if (!b) return; lsSet(KEY_KIND, b.dataset.capkind); renderKinds(); });
   document.getElementById("capture").addEventListener("submit", async e => {
     e.preventDefault();
     const inp = document.getElementById("cap"), t = inp.value.trim(); if (!t) return;
+    const kind = lsGet(KEY_KIND, "思案");
     inp.value = "";
-    await commit(doc => { doc.notes.push(newNote(t)); }, "home-status");
-    say("home-status", "書きました");
+    // リマインダーは今日のリマインダーの欄に出るので、受信箱には入れない
+    await commit(doc => { doc.notes.push(newNote(t, kind === "リマインダー" ? { kind, inbox: false, remind: { date: today(), time: "", repeat: "" } } : { kind })); }, "home-status");
+    say("home-status", kind + "を書きました");
     inp.focus();
   });
-  const onOpen = e => { const b = e.target.closest("[data-open]"); if (b) openNote(b.dataset.open); };
-  ["home", "list"].forEach(id => document.getElementById(id).addEventListener("click", onOpen));
-  document.getElementById("q").addEventListener("input", renderList);
-  document.getElementById("fs").addEventListener("change", renderList);
+  const openFrom = e => { const b = e.target.closest("[data-open]"); if (b) { const n = byId(b.dataset.open);
+    if (n && n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen) commit(mut(n.id, x => { x.wokeSeen = true; }));
+    openNote(b.dataset.open); return true; } return false; };
+  const remActions = async e => {
+    let b;
+    if ((b = e.target.closest("[data-rem-done]"))) { const id = b.dataset.remDone;
+      await commit(mut(id, x => { const r = x.remind; if (!r) return; if (r.repeat) { r.last = today(); r.date = nextDate(r); } else { r.done = true; r.doneAt = today(); } x.inbox = false; }));
+      return true; }
+    if ((b = e.target.closest("[data-rem-later]"))) { const id = b.dataset.remLater; await commit(mut(id, x => { if (x.remind) x.remind.date = addDays(today(), 1); })); return true; }
+    return false;
+  };
+  document.getElementById("home").addEventListener("click", async e => {
+    if (e.target.closest("[data-rem-done]") || e.target.closest("[data-rem-later]")) { await remActions(e); return; }
+    if (e.target.closest("[data-inbox-all]")) { await commit(doc => doc.notes.forEach(n => { if (n.inbox) n.inbox = false; })); return; }
+    openFrom(e);
+  });
+  document.getElementById("results").addEventListener("click", openFrom);
+  document.getElementById("q").addEventListener("input", renderSearch);
+  ["fk", "fs"].forEach(id => document.getElementById(id).addEventListener("change", renderSearch));
+  document.getElementById("tagbar").addEventListener("click", e => { const b = e.target.closest("[data-tagf]"); if (!b) return; state.tag = state.tag === b.dataset.tagf ? "" : b.dataset.tagf; renderSearch(); });
   document.getElementById("mix").addEventListener("click", async () => {
-    const pool = notes().filter(n => !sleeping(n));
-    if (pool.length < 2) { alert("思案が2つ以上あると掛け合わせられます。"); return; }
-    const a = pool[rnd(pool.length)]; let b = pool[rnd(pool.length)]; let guard = 0;
-    while (b.id === a.id && guard++ < 20) b = pool[rnd(pool.length)];
+    const pool = notes().filter(n => live(n) && !sleeping(n) && !sealed(n) && kindOf(n) !== "リマインダー");
+    if (pool.length < 2) { say("conn-status", ""); alert("思案やメモが2つ以上あると掛け合わせられます。"); return; }
+    const a = pool[rnd(pool.length)]; let b = pool[rnd(pool.length)]; let g = 0;
+    while (b.id === a.id && g++ < 20) b = pool[rnd(pool.length)];
     if (b.id === a.id) b = pool.find(x => x.id !== a.id);
     const n = newNote("「" + titleOf(a) + "」×「" + titleOf(b) + "」\nこの2つを組み合わせると?\n[[" + titleOf(a) + "]] [[" + titleOf(b) + "]]\n", { links: [a.id, b.id], prompt: "この2つを組み合わせると?" });
-    await commit(doc => { doc.notes.push(n); });
-    openNote(n.id, true);
+    await commit(doc => { doc.notes.push(n); }); openNote(n.id, true);
+  });
+
+  document.getElementById("note").addEventListener("change", async e => {
+    const n = byId(state.open); if (!n) return;
+    const cl = e.target.closest("[data-cl]");
+    if (cl) {
+      const idx = +cl.dataset.cl, on = cl.checked;
+      const flip = text => { const ls = text.split("\n"); ls[idx] = ls[idx].replace(/- \[( |x|X)\]/, on ? "- [x]" : "- [ ]"); return ls.join("\n"); };
+      if (sealed(n)) { const p = state.unsealed[n.id]; const np = { text: flip(p.text), fields: p.fields || [] }; const blob = await seal(np); state.unsealed[n.id] = np; await commit(mut(n.id, x => { x.sealed = blob; })); }
+      else await commit(mut(n.id, x => { x.text = flip(x.text || ""); }));
+      return;
+    }
+    if (e.target.id === "kind-sel") { const v = e.target.value; await commit(mut(n.id, x => { x.kind = v; if (v === "リマインダー" && !x.remind) x.remind = { date: today(), time: "", repeat: "" }; })); }
   });
   document.getElementById("note").addEventListener("click", async e => {
     const q = s => e.target.closest(s);
     const n = byId(state.open); if (!n) return;
     let b;
     if (q("[data-back]")) { show(state.backTo || "home"); return; }
+    if (q("[data-goto-vault]")) { state.shelf = VAULT; renderLib(); show("lib"); return; }
+    if ((b = q("[data-tag]"))) { state.tag = b.dataset.tag; document.getElementById("q").value = ""; renderSearch(); show("search"); return; }
     if ((b = q("[data-wl]"))) {
-      const t = b.dataset.wl.replace(/&amp;/g, "&");
-      const hitN = byTitle(t);
-      if (hitN) { openNote(hitN.id); return; }
-      const nn = newNote(t, { links: [] });
-      await commit(doc => { doc.notes.push(nn); });
-      openNote(nn.id, true); return;
+      const t = b.dataset.wl.replace(/&amp;/g, "&"), hit = byTitle(t);
+      if (hit) { openNote(hit.id); return; }
+      const nn = newNote(t, { kind: kindOf(n) === "書庫" ? "メモ" : kindOf(n) === "リマインダー" ? "メモ" : kindOf(n) });
+      await commit(doc => { doc.notes.push(nn); }); openNote(nn.id, true); return;
     }
+    if (q("[data-rem-done]") || q("[data-rem-later]")) { await remActions(e); return; }
     if ((b = q("[data-open]"))) { openNote(b.dataset.open); return; }
+    if (q("[data-cl]") || q("label.cl")) return;
+    if (q("a")) return;
     if (q("[data-edit]")) { state.edit = true; renderNote(); const ta = document.getElementById("n-text"); if (ta) ta.focus(); return; }
     if (q("[data-cancel]")) { state.edit = false; renderNote(); return; }
+    const readFields = () => Array.from(document.querySelectorAll("#fedit .fedit")).map(r => ({ k: r.querySelector("[data-fk]").value.trim(), v: r.querySelector("[data-fv]").value })).filter(f => f.k || f.v);
+    if (q("[data-fadd]") || (b = q("[data-fdel]"))) {
+      const text = document.getElementById("n-text").value, fields = readFields();
+      if (b) fields.splice(+b.dataset.fdel, 1); else fields.push({ k: "", v: "" });
+      const p = plainOf(n);
+      if (sealed(n)) state.unsealed[n.id] = { text, fields }; else { n.text = text; n.fields = fields; }
+      renderNote(); return;
+    }
     if (q("[data-save]")) {
       const text = document.getElementById("n-text").value;
       if (!text.trim()) { say("note-status", "何か書いてください。", true); return; }
-      await commit(doc => { const x = doc.notes.find(y => y.id === n.id); if (x) { x.text = text; x.updated = new Date().toISOString(); if (x.stage === "種" && text.split("\n").filter(l => l.trim()).length > 2) x.stage = "芽"; } }, "note-status");
+      const fields = document.getElementById("fedit") ? readFields() : null;
+      if (sealed(n)) {
+        const np = { text, fields: fields || [] }; const blob = await seal(np); state.unsealed[n.id] = np;
+        await commit(mut(n.id, x => { x.sealed = blob; }), "note-status");
+      } else await commit(mut(n.id, x => { x.text = text; if (fields) x.fields = fields;
+        if (kindOf(x) === "思案" && x.stage === "種" && text.split("\n").filter(l => l.trim()).length > 2) x.stage = "芽"; }), "note-status");
       state.edit = false; renderNote(); return;
     }
-    if ((b = q("[data-stage]"))) { const s = b.dataset.stage; await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.stage = s; x.updated = new Date().toISOString(); }); return; }
+    if ((b = q("[data-copy]"))) { const p = plainOf(n), f = (p.fields || [])[+b.dataset.copy]; if (f) copyText(f.v); return; }
+    if (q("[data-copy-body]")) { copyText(textOf(n).split("\n").slice(1).join("\n")); return; }
+    if ((b = q("[data-reveal]"))) { state.revealed[b.dataset.reveal] = !state.revealed[b.dataset.reveal]; renderNote(); return; }
+    if (q("[data-pin]")) { await commit(mut(n.id, x => { x.pinned = !x.pinned; })); return; }
+    if (q("[data-tidy]")) { await commit(mut(n.id, x => { x.inbox = false; })); return; }
+    if (q("[data-archive]")) { await commit(mut(n.id, x => { x.archived = !x.archived; x.inbox = false; })); return; }
+    if ((b = q("[data-rq]"))) { const el = document.getElementById("r-date"); if (el) el.value = b.dataset.rq; return; }
+    if (q("[data-rem-save]")) {
+      const date = document.getElementById("r-date").value, time = document.getElementById("r-time").value, rep = document.getElementById("r-rep").value, road = document.getElementById("r-road").checked;
+      if (!date) { say("note-status2", "日付を選んでください。", true); return; }
+      await commit(mut(n.id, x => { x.remind = Object.assign({}, x.remind || {}, { date, time, repeat: rep, roadmap: road, done: false }); x.inbox = false; }));
+      say("note-status2", "期日を保存しました"); return;
+    }
+    if (q("[data-rem-undo]")) { await commit(mut(n.id, x => { if (x.remind) { x.remind.done = false; delete x.remind.doneAt; } })); return; }
+    if ((b = q("[data-stage]"))) { const s = b.dataset.stage; await commit(mut(n.id, x => { x.stage = s; })); return; }
     if (q("[data-ask]") || q("[data-ask-pick]")) {
-      const pool = promptPool(false);
-      let p;
-      if (q("[data-ask-pick]")) {
-        const id = document.getElementById("ask-pick").value;
-        const hitP = pool.find(x => x.id === id);
-        if (!hitP) { say("note-status2", "問いを選んでください。", true); return; }
-        p = hitP.text;
-      } else {
-        if (!pool.length) { say("note-status2", "問いの束が空です。設定で問いを足すか戻してください。", true); return; }
-        p = pool[rnd(pool.length)].text;
-      }
-      await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.prompt = p; x.text = (x.text || "").replace(/\s+$/, "") + "\n\n問い:" + p + "\n"; x.updated = new Date().toISOString(); });
+      const pool = promptPool(false); let p;
+      if (q("[data-ask-pick]")) { const hit = pool.find(x => x.id === document.getElementById("ask-pick").value); if (!hit) { say("note-status2", "問いを選んでください。", true); return; } p = hit.text; }
+      else { if (!pool.length) { say("note-status2", "問いの束が空です。設定で問いを足すか戻してください。", true); return; } p = pool[rnd(pool.length)].text; }
+      await commit(mut(n.id, x => { x.prompt = p; x.text = (x.text || "").replace(/\s+$/, "") + "\n\n問い:" + p + "\n"; }));
       state.edit = true; renderNote(); return;
     }
-    if ((b = q("[data-sleep]"))) { const until = addDays(today(), +b.dataset.sleep); await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.snoozeUntil = until; x.wokeSeen = false; }); say("note-status2", until + " に浮かび上がります"); return; }
-    if (q("[data-wake]")) { await commit(doc => { const x = doc.notes.find(y => y.id === n.id); delete x.snoozeUntil; delete x.wokeSeen; }); return; }
-    if (q("[data-link]")) { const to = document.getElementById("link-to").value; await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.links = Array.from(new Set((x.links || []).concat([to]))); }); return; }
+    if ((b = q("[data-sleep]"))) { const until = addDays(today(), +b.dataset.sleep); await commit(mut(n.id, x => { x.snoozeUntil = until; x.wokeSeen = false; x.inbox = false; })); say("note-status2", until + " に浮かび上がります"); return; }
+    if (q("[data-wake]")) { await commit(mut(n.id, x => { delete x.snoozeUntil; delete x.wokeSeen; })); return; }
+    if (q("[data-link]")) { const to = document.getElementById("link-to").value; await commit(mut(n.id, x => { x.links = Array.from(new Set((x.links || []).concat([to]))); })); return; }
     if (q("[data-to-task]") || q("[data-to-agenda]")) {
       const toTask = !!q("[data-to-task]");
-      try {
-        const msg = toTask ? await sendToTask(n) : await sendToAgenda(n);
-        await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.sent = msg; x.stage = "実行へ"; });
-      } catch (err) { say("note-status2", err.message, true); }
+      try { const msg = toTask ? await sendToTask(n) : await sendToAgenda(n); await commit(mut(n.id, x => { x.sent = msg; x.stage = "実行へ"; })); }
+      catch (err) { say("note-status2", err.message, true); }
       return;
     }
     if (q("[data-del]")) {
       if (!confirm("「" + titleOf(n) + "」を消しますか。つながりも外れます。")) return;
       await commit(doc => { doc.notes = doc.notes.filter(y => y.id !== n.id); doc.notes.forEach(y => { if (y.links) y.links = y.links.filter(l => l !== n.id); }); });
-      show("home"); return;
+      delete state.unsealed[n.id]; show(state.backTo || "home"); return;
     }
   });
-  // 寝かせ明けを開いたら、寝かせ明けの欄からは外す
-  document.getElementById("home").addEventListener("click", async e => {
-    const b = e.target.closest("[data-open]"); if (!b) return;
-    const n = byId(b.dataset.open);
-    if (n && n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen) commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.wokeSeen = true; });
+
+  document.getElementById("lib").addEventListener("input", e => { if (e.target.id === "lib-q") renderLibHits(); });
+  document.getElementById("lib").addEventListener("click", async e => {
+    const q = s => e.target.closest(s); let b;
+    if ((b = q("[data-open]"))) { openNote(b.dataset.open); return; }
+    if ((b = q("[data-shelf]"))) { state.shelf = b.dataset.shelf; renderLib(); return; }
+    if (q("[data-shelf-back]")) { state.shelf = null; renderLib(); return; }
+    if (q("[data-goto-settings]")) { render(); show("settings"); return; }
+    if (q("[data-shelf-add]")) { const t = (document.getElementById("shelf-new").value || "").trim(); if (!t || (state.doc.shelves || []).includes(t)) return;
+      await commit(doc => { doc.shelves = (doc.shelves || DEFAULT_SHELVES.slice()).concat([t]); }); return; }
+    if (q("[data-lock]")) { lockVault(); return; }
+    if (q("[data-unlock]")) {
+      const sec = document.getElementById("ul-secret").value, byRec = document.getElementById("ul-rec").checked;
+      if (!sec) return;
+      try { await openVault(sec, byRec); renderLib(); renderVaultSettings();
+        if (byRec) { say("conn-status", ""); render(); show("settings"); say("v-status", "予備の鍵で開けました。新しい合言葉を決めてください。"); } }
+      catch (err) { say("ul-status", err.message, true); }
+      return;
+    }
+    if (q("[data-entry-new]")) {
+      const s = state.shelf, base = { kind: "書庫", shelf: s, inbox: false };
+      let n;
+      if (s === VAULT) { const p = { text: "新しい項目", fields: [{ k: "ID", v: "" }, { k: "パスワード", v: "" }] }; n = newNote("", Object.assign(base, { sealed: await seal(p) })); delete n.text; state.unsealed[n.id] = p; }
+      else n = newNote("新しい項目", Object.assign(base, { fields: s === "コード" ? [] : [{ k: "", v: "" }] }));
+      await commit(doc => { doc.notes.push(n); }); openNote(n.id, true); return;
+    }
   });
-  document.getElementById("g-fit").addEventListener("click", () => G.fit());
+
+  document.getElementById("vault-settings").addEventListener("click", async e => {
+    const q = s => e.target.closest(s);
+    if (q("[data-goto-vault]")) { state.shelf = VAULT; renderLib(); show("lib"); return; }
+    if (q("[data-copy-key]")) { copyText(state.newKey, "v-status"); return; }
+    if (q("[data-key-done]")) { state.newKey = null; renderVaultSettings(); return; }
+    if (q("[data-lock]")) { lockVault(); return; }
+    if (q("[data-vault-create]")) {
+      const p1 = document.getElementById("v-p1").value, p2 = document.getElementById("v-p2").value;
+      if (!p1) { say("v-status", "合言葉を入れてください。", true); return; }
+      if (p1 !== p2) { say("v-status", "2つの合言葉が違います。", true); return; }
+      const { vault, rec } = await createVault(p1);
+      await commit(doc => { doc.vault = vault; }, "v-status");
+      state.newKey = rec; clearTimeout(state.lockTimer); state.lockTimer = setTimeout(lockVault, LOCK_MS); renderVaultSettings(); return;
+    }
+    if (q("[data-pass-change]")) {
+      const a = document.getElementById("v-n1").value, c = document.getElementById("v-n2").value;
+      if (!a) { say("v-status", "新しい合言葉を入れてください。", true); return; }
+      if (a !== c) { say("v-status", "2つの合言葉が違います。", true); return; }
+      const w = await wrapRaw(state.vaultRaw, a);
+      await commit(doc => { doc.vault.pass = w; }, "v-status"); say("v-status", "合言葉を変えました"); return;
+    }
+    if (q("[data-rec-renew]")) {
+      if (!confirm("予備の鍵を作り直すと、前の予備の鍵では開けなくなります。作り直しますか。")) return;
+      const rec = newRecoveryKey(), w = await wrapRaw(state.vaultRaw, normKey(rec));
+      await commit(doc => { doc.vault.rec = w; }, "v-status"); state.newKey = rec; renderVaultSettings(); return;
+    }
+  });
+
   const addQ = async () => {
     const inp = document.getElementById("q-new"), t = inp.value.trim(); if (!t) return;
     if (promptPool(true).some(p => p.text === t)) { say("q-status", "同じ問いがもうあります。", true); return; }
-    inp.value = "";
-    await commit(doc => { doc.prompts = (doc.prompts || []).concat([{ id: "q" + uid(), text: t, created: today() }]); }, "q-status");
-    say("q-status", "足しました");
+    inp.value = ""; await commit(doc => { doc.prompts = (doc.prompts || []).concat([{ id: "q" + uid(), text: t, created: today() }]); }, "q-status"); say("q-status", "足しました");
   };
   document.getElementById("q-add").addEventListener("click", addQ);
   document.getElementById("q-new").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addQ(); } });
   document.getElementById("qlist").addEventListener("click", async e => {
     const tg = e.target.closest("[data-q-toggle]"), dl = e.target.closest("[data-q-del]");
-    if (tg) {
-      const id = tg.dataset.qToggle;
-      await commit(doc => {
-        if (id.startsWith("base:")) {
-          const t = id.slice(5), off = new Set(doc.promptsOff || []);
-          off.has(t) ? off.delete(t) : off.add(t); doc.promptsOff = Array.from(off);
-        } else { const p = (doc.prompts || []).find(x => x.id === id); if (p) p.off = !p.off; }
-      }, "q-status");
-    }
-    if (dl) {
-      const id = dl.dataset.qDel;
-      await commit(doc => { doc.prompts = (doc.prompts || []).filter(x => x.id !== id); }, "q-status");
-    }
+    if (tg) { const id = tg.dataset.qToggle; await commit(doc => { if (id.startsWith("base:")) { const t = id.slice(5), off = new Set(doc.promptsOff || []); off.has(t) ? off.delete(t) : off.add(t); doc.promptsOff = Array.from(off); }
+      else { const p = (doc.prompts || []).find(x => x.id === id); if (p) p.off = !p.off; } }, "q-status"); }
+    if (dl) { const id = dl.dataset.qDel; await commit(doc => { doc.prompts = (doc.prompts || []).filter(x => x.id !== id); }, "q-status"); }
   });
+  document.getElementById("g-fit").addEventListener("click", () => G.fit());
   document.getElementById("connect").addEventListener("click", async () => {
     const v = id => document.getElementById(id).value.trim();
     state.conn = { owner: v("c-owner"), repo: v("c-repo"), branch: v("c-branch") || "main", token: v("c-token") };
@@ -594,10 +935,11 @@ function boot(){
   document.getElementById("c-branch").value = c ? c.branch : "main";
   document.getElementById("c-token").value = c ? c.token : "";
   const cache = lsGet(KEY_CACHE, null);
-  if (cache && cache.doc) { state.doc = cache.doc; state.sha = cache.sha; render(); }
+  if (cache && cache.doc) { state.doc = normDoc(cache.doc); state.sha = cache.sha; }
+  render();
   if (c && c.token) { state.conn = c; load(); } else show("settings");
 }
-window.__shian = { state, G, linksOf, backlinksOf, titleOf, load };
+window.__shian = { state, G, linksOf, backlinksOf, titleOf, load, openVault, lockVault, remBuckets, calendarUrl, nextDate };
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
 </script>
