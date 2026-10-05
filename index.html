@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>思案</title>
+<meta name="theme-color" content="#0E1224">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--sky:#0E1224;--deep:#151B33;--panel:#1B2240;--rule:#2C3560;--text:#E8E6F2;--sub:#9A9BB8;
+  --seed:#8C93B8;--sprout:#7FC79A;--plan:#F2C46B;--go:#F07F5E;--link:#9DB8FF}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--sky);color:var(--text)}
+body{font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;font-size:15px;line-height:1.7;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.wrap{max-width:680px;margin:0 auto;padding:1rem 1rem 2rem}
+.view[hidden]{display:none}
+h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
+.capture{display:flex;gap:.5rem;margin-bottom:1.2rem}
+.capture input{flex:1;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;font-size:1rem}
+.capture input::placeholder{color:var(--sub)}
+.btn{border:1px solid var(--plan);background:var(--plan);color:var(--sky);border-radius:10px;padding:.5rem 1rem;cursor:pointer;font-weight:700}
+.btn.ghost{background:transparent;color:var(--plan)}
+.btn.sm{padding:.25rem .7rem;font-size:.84rem;border-radius:8px}
+.btn.quiet{border-color:var(--rule);background:transparent;color:var(--sub);font-weight:400}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:.8rem 1rem;margin:.6rem 0}
+.card h2{margin:0 0 .3rem;font-size:.8rem;color:var(--sub);letter-spacing:.15em;font-weight:400}
+.note-row{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--rule);padding:.6rem .2rem;cursor:pointer}
+.note-row:last-child{border-bottom:none}
+.note-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-row .m{font-size:.74rem;color:var(--sub);white-space:nowrap}
+.dot{width:.7rem;height:.7rem;border-radius:50%;flex:0 0 auto;box-shadow:0 0 8px currentColor}
+.s-種{color:var(--seed);background:var(--seed)}.s-芽{color:var(--sprout);background:var(--sprout)}
+.s-構想{color:var(--plan);background:var(--plan)}.s-実行へ{color:var(--go);background:var(--go)}
+.empty{color:var(--sub);font-size:.9rem;padding:.6rem 0}
+.status{font-size:.84rem;color:var(--sub)}.status.err{color:var(--go)}
+/* 思案のページ */
+.back{border:none;background:none;color:var(--sub);cursor:pointer;padding:0;margin-bottom:.6rem}
+textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8}
+.render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;white-space:pre-wrap;min-height:4rem;cursor:text}
+.render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
+.wl{color:var(--link);text-decoration:underline;text-decoration-style:dotted;cursor:pointer}
+.wl.missing{color:var(--sub)}
+.stages{display:flex;gap:.3rem;flex-wrap:wrap;margin:.7rem 0}
+.stages button{border:1px solid var(--rule);background:transparent;border-radius:20px;padding:.2rem .8rem;cursor:pointer;font-size:.86rem;color:var(--sub)}
+.stages button[aria-pressed="true"]{color:var(--sky);font-weight:700}
+.stages button[aria-pressed="true"].b-種{background:var(--seed);border-color:var(--seed)}
+.stages button[aria-pressed="true"].b-芽{background:var(--sprout);border-color:var(--sprout)}
+.stages button[aria-pressed="true"].b-構想{background:var(--plan);border-color:var(--plan)}
+.stages button[aria-pressed="true"].b-実行へ{background:var(--go);border-color:var(--go)}
+.tools{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0}
+.prompt{border-left:3px solid var(--plan);padding:.3rem .7rem;margin:.5rem 0;color:var(--plan);font-size:.9rem}
+.f label{display:block;font-size:.76rem;color:var(--sub);margin-bottom:.15rem}
+.f input,.f select{width:100%;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem .6rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:.5rem .7rem}
+.filters{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.filters input{flex:1 1 10rem;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.4rem .6rem}
+.filters select{background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.4rem}
+/* つながり */
+#graph-wrap{position:relative;height:calc(100vh - 150px);min-height:360px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 40%,#1A2148 0%,var(--sky) 70%);touch-action:none}
+#graph{width:100%;height:100%;display:block}
+.legend{display:flex;gap:.8rem;font-size:.76rem;color:var(--sub);margin:.4rem 0;flex-wrap:wrap;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:.3rem}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--deep);border-top:1px solid var(--rule);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{flex:1;border:none;background:none;padding:.8rem 0;cursor:pointer;color:var(--sub);font-weight:700}
+nav.tabs button[aria-selected="true"]{color:var(--plan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="view" id="view-home">
+    <h1>思案</h1>
+    <form class="capture" id="capture" autocomplete="off">
+      <input id="cap" placeholder="思いついたことを1行で" aria-label="思いついたこと">
+      <button class="btn" type="submit">書く</button>
+    </form>
+    <span class="status" id="home-status"></span>
+    <div id="home"></div>
+  </section>
+
+  <section class="view" id="view-note" hidden><div id="note"></div></section>
+
+  <section class="view" id="view-list" hidden>
+    <h1>一覧</h1>
+    <div class="filters">
+      <input id="q" type="search" placeholder="探す">
+      <select id="fs"><option value="">すべての段階</option><option>種</option><option>芽</option><option>構想</option><option>実行へ</option><option value="寝かせ中">寝かせ中</option></select>
+    </div>
+    <div style="margin-bottom:.6rem"><button class="btn ghost sm" type="button" id="mix">掛け合わせる</button></div>
+    <div id="list"></div>
+  </section>
+
+  <section class="view" id="view-graph" hidden>
+    <h1>つながり</h1>
+    <div class="legend"><span><i class="dot s-種"></i>種</span><span><i class="dot s-芽"></i>芽</span><span><i class="dot s-構想"></i>構想</span><span><i class="dot s-実行へ"></i>実行へ</span>
+      <span style="margin-left:auto"><button class="btn quiet sm" type="button" id="g-fit">全体を見る</button></span></div>
+    <div id="graph-wrap"><canvas id="graph"></canvas></div>
+  </section>
+
+  <section class="view" id="view-settings" hidden>
+    <h1>設定</h1>
+    <p style="color:var(--sub);font-size:.88rem">思案は非公開のリポジトリに保存します。行軍表と同じトークンが使えます。</p>
+    <div class="grid2">
+      <div class="f"><label for="c-owner">ユーザー名</label><input id="c-owner" autocomplete="off"></div>
+      <div class="f"><label for="c-repo">リポジトリ</label><input id="c-repo" autocomplete="off"></div>
+      <div class="f"><label for="c-branch">ブランチ</label><input id="c-branch" autocomplete="off"></div>
+    </div>
+    <div class="f" style="margin-top:.5rem"><label for="c-token">トークン</label><input id="c-token" type="password" autocomplete="off"></div>
+    <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+      <button class="btn" id="connect" type="button">接続して読み込む</button>
+      <button class="btn ghost" id="reload" type="button">読み込み直す</button>
+      <span class="status" id="conn-status"></span>
+    </div>
+    <p class="status" id="ver" style="margin-top:1rem"></p>
+  </section>
+</div>
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-view="home">書く</button>
+  <button role="tab" aria-selected="false" data-view="list">一覧</button>
+  <button role="tab" aria-selected="false" data-view="graph">つながり</button>
+  <button role="tab" aria-selected="false" data-view="settings">設定</button>
+</nav>
+<script>
+(function(){
+"use strict";
+const APP_VERSION = "2026-10-05 r1";
+const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache";
+const PATH = "roadmap/shian/notes.json";
+const STAGES = ["種", "芽", "構想", "実行へ"];
+const COLOR = { "種": "#8C93B8", "芽": "#7FC79A", "構想": "#F2C46B", "実行へ": "#F07F5E" };
+const PROMPTS = ["逆にしたら?", "極端にしたら?(10倍、0にする)", "別の分野ならどうやる?", "何かと組み合わせたら?", "取り除いたら?",
+  "誰のためのもの?", "なぜそれが要る?(3回なぜ)", "一番小さく試すなら?", "10年後から見たら?", "失敗するとしたら何が原因?"];
+
+const state = { conn: null, doc: { version: 1, notes: [] }, sha: null, open: null, edit: false, view: "home" };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const today = () => window.__shianToday || new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const rnd = n => Math.floor((window.__shianRandom ? window.__shianRandom() : Math.random()) * n);
+
+/* ───── 思案の扱い ───── */
+const titleOf = n => (n.text || "").split("\n")[0].trim() || "(無題)";
+const notes = () => state.doc.notes;
+const byId = id => notes().find(n => n.id === id);
+const byTitle = t => notes().find(n => titleOf(n) === t.trim());
+const WIKI = /\[\[([^\]\n]+)\]\]/g;
+function linksOf(n){
+  const out = new Set(n.links || []);
+  let m; WIKI.lastIndex = 0;
+  while ((m = WIKI.exec(n.text || ""))) { const t = byTitle(m[1]); if (t && t.id !== n.id) out.add(t.id); }
+  return Array.from(out).filter(id => byId(id));
+}
+const backlinksOf = n => notes().filter(x => x.id !== n.id && linksOf(x).includes(n.id));
+const degree = n => new Set(linksOf(n).concat(backlinksOf(n).map(x => x.id))).size;
+const sleeping = n => n.snoozeUntil && n.snoozeUntil > today();
+
+/* ───── GitHub ───── */
+function b64e(str){ const b = new TextEncoder().encode(str); let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
+function b64d(b64){ const bin = atob(String(b64).replace(/\s/g, "")); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); }
+const repo = () => "https://api.github.com/repos/" + encodeURIComponent(state.conn.owner) + "/" + encodeURIComponent(state.conn.repo);
+const hdr = x => Object.assign({ "Authorization": "Bearer " + state.conn.token, "Accept": "application/vnd.github+json" }, x || {});
+async function fetchRetry(url, opts){ let last; for (let i = 0; i < 3; i++) { try { return await fetch(url, opts); } catch (e) { last = e; await new Promise(r => setTimeout(r, 500 * (i + 1))); } } throw last; }
+function httpErr(st, p){ const e = new Error(st === 401 ? "トークンが無効です。設定から入れ直してください。" : "GitHubとの通信に失敗しました(" + st + " " + p + ")。"); e.status = st; return e; }
+async function readJson(path){
+  const url = repo() + "/contents/" + path + "?ref=" + encodeURIComponent(state.conn.branch);
+  const r = await fetchRetry(url, { headers: hdr(), cache: "no-store" });
+  if (r.status === 404) return { data: null, sha: null };
+  if (!r.ok) throw httpErr(r.status, path);
+  const meta = await r.json();
+  let text = meta.content ? b64d(meta.content) : null;
+  if (text == null) text = await (await fetchRetry(url, { headers: hdr({ "Accept": "application/vnd.github.raw+json" }), cache: "no-store" })).text();
+  return { data: JSON.parse(text), sha: meta.sha };
+}
+async function writeJson(path, obj, sha, msg){
+  const body = { message: msg || "思案を更新", content: b64e(JSON.stringify(obj, null, 1)), branch: state.conn.branch };
+  if (sha) body.sha = sha;
+  const r = await fetchRetry(repo() + "/contents/" + path, { method: "PUT", headers: hdr({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
+  if (!r.ok) throw httpErr(r.status, path);
+  return (await r.json()).content.sha;
+}
+function say(id, t, err){ const el = document.getElementById(id); if (el) { el.textContent = t; el.classList.toggle("err", !!err); } }
+
+async function load(){
+  if (!state.conn || !state.conn.token) { show("settings"); return false; }
+  say("conn-status", "読み込んでいます…");
+  try {
+    const r = await readJson(PATH);
+    state.doc = (r.data && r.data.notes) ? r.data : { version: 1, notes: [] }; state.sha = r.sha;
+    lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha });
+    say("conn-status", "読み込みました"); render(); return true;
+  } catch (e) { say("conn-status", e.message, true); say("home-status", e.message, true); return false; }
+}
+// 保存。別の端末で先に変わっていたら読み直して同じ操作をかけ直す
+async function commit(mutate, statusId){
+  mutate(state.doc); render();
+  lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha });
+  for (let i = 0; i < 3; i++) {
+    try { state.sha = await writeJson(PATH, state.doc, state.sha); lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha }); return true; }
+    catch (e) {
+      if ((e.status === 409 || e.status === 422) && i < 2) {
+        const fresh = await readJson(PATH);
+        state.doc = (fresh.data && fresh.data.notes) ? fresh.data : { version: 1, notes: [] }; state.sha = fresh.sha;
+        mutate(state.doc); render(); continue;
+      }
+      say(statusId || "home-status", e.message || "保存できませんでした(端末には残っています)", true); return false;
+    }
+  }
+  return false;
+}
+function newNote(text, extra){
+  const n = Object.assign({ id: uid(), text, stage: "種", created: today(), updated: new Date().toISOString(), links: [] }, extra || {});
+  return n;
+}
+
+/* ───── 描画 ───── */
+function row(n){
+  const d = degree(n);
+  return '<button type="button" class="note-row" data-open="' + esc(n.id) + '"><i class="dot s-' + esc(n.stage) + '"></i><span class="t">' + esc(titleOf(n)) +
+    '</span><span class="m">' + (d ? "つながり " + d + "　" : "") + (sleeping(n) ? "寝かせ中〜" + esc(n.snoozeUntil.slice(5)) : esc(n.created.slice(5))) + "</span></button>";
+}
+function renderHome(){
+  const all = notes();
+  const woke = all.filter(n => n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen);
+  const awake = all.filter(n => !sleeping(n));
+  const old = awake.filter(n => n.created < addDays(today(), -2));
+  const pick = old.length ? old[(Date.parse(today()) / 864e5) % old.length | 0] : null;   // 1日1つ、日替わり
+  const recent = awake.slice().sort((a, b) => (a.updated < b.updated ? 1 : -1)).slice(0, 8);
+  document.getElementById("home").innerHTML =
+    (woke.length ? '<div class="card"><h2>寝かせ明け</h2>' + woke.map(row).join("") + "</div>" : "") +
+    (pick ? '<div class="card"><h2>再会</h2>' + row(pick) + "</div>" : "") +
+    '<div class="card"><h2>最近の思案</h2>' + (recent.length ? recent.map(row).join("") : '<div class="empty">まだ何もありません。上の欄に、思いついたことを書いてみてください。</div>') + "</div>";
+}
+function renderList(){
+  const q = (document.getElementById("q").value || "").trim().toLowerCase(), fs = document.getElementById("fs").value;
+  const list = notes().filter(n => (!q || (n.text || "").toLowerCase().includes(q)) &&
+    (!fs || (fs === "寝かせ中" ? sleeping(n) : n.stage === fs && !sleeping(n))))
+    .sort((a, b) => (a.updated < b.updated ? 1 : -1));
+  document.getElementById("list").innerHTML = '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">ありません。</div>') + "</div>";
+}
+function renderBody(n){
+  const lines = (n.text || "").split("\n");
+  const html = esc(lines.slice(1).join("\n")).replace(/\[\[([^\]\n]+)\]\]/g, (m, t) => {
+    const raw = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    const hit = byTitle(raw);
+    return '<span class="wl' + (hit ? "" : " missing") + '" data-wl="' + t + '">' + t + "</span>";
+  });
+  return '<span class="ttl">' + esc(titleOf(n)) + "</span>" + html;
+}
+function renderNote(){
+  const n = byId(state.open), box = document.getElementById("note");
+  if (!n) { box.innerHTML = ""; return; }
+  const outs = linksOf(n).map(byId), backs = backlinksOf(n);
+  const others = notes().filter(x => x.id !== n.id && !outs.includes(x)).sort((a, b) => titleOf(a).localeCompare(titleOf(b), "ja"));
+  box.innerHTML = '<button type="button" class="back" data-back>‹ もどる</button>' +
+    (state.edit
+      ? '<textarea class="body" id="n-text" aria-label="本文">' + esc(n.text) + '</textarea><p style="font-size:.78rem;color:var(--sub);margin:.3rem 0">1行目が名前。[[別の思案の名前]] と書くとつながる。</p>' +
+        '<div style="display:flex;gap:.5rem;align-items:center"><button type="button" class="btn sm" data-save>保存</button><button type="button" class="btn quiet sm" data-cancel>やめる</button><span class="status" id="note-status"></span></div>'
+      : '<div class="render" data-edit title="押すと書ける">' + renderBody(n) + "</div>") +
+    '<div class="stages" role="group" aria-label="段階">' + STAGES.map(s => '<button type="button" class="b-' + s + '" data-stage="' + s + '" aria-pressed="' + (n.stage === s) + '">' + s + "</button>").join("") + "</div>" +
+    (n.prompt ? '<div class="prompt">問い:' + esc(n.prompt) + "</div>" : "") +
+    '<div class="tools">' +
+      '<button type="button" class="btn ghost sm" data-ask>問いかける</button>' +
+      '<button type="button" class="btn ghost sm" data-sleep="3">3日寝かせる</button><button type="button" class="btn ghost sm" data-sleep="7">1週間寝かせる</button>' +
+      (n.snoozeUntil ? '<button type="button" class="btn quiet sm" data-wake>起こす</button>' : "") +
+    "</div>" +
+    (n.stage === "構想" || n.stage === "実行へ" ? '<div class="tools"><button type="button" class="btn sm" data-to-task>タスクにする</button><button type="button" class="btn sm" data-to-agenda>常任評議会の議題にする</button></div>' : "") +
+    (n.sent ? '<p style="font-size:.8rem;color:var(--sub)">' + esc(n.sent) + "</p>" : "") +
+    '<div class="card"><h2>つないでいる思案 ' + outs.length + "</h2>" + (outs.length ? outs.map(row).join("") : '<div class="empty">まだありません。</div>') +
+      (others.length ? '<div style="display:flex;gap:.4rem;margin-top:.5rem"><select id="link-to" style="flex:1;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.35rem">' +
+        others.map(o => '<option value="' + esc(o.id) + '">' + esc(titleOf(o)) + "</option>").join("") + '</select><button type="button" class="btn ghost sm" data-link>つなぐ</button></div>' : "") + "</div>" +
+    '<div class="card"><h2>この思案を指している ' + backs.length + "</h2>" + (backs.length ? backs.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>" +
+    '<div style="margin-top:1rem"><button type="button" class="btn quiet sm" data-del>この思案を消す</button></div><span class="status" id="note-status2"></span>';
+}
+function render(){
+  renderHome(); renderList();
+  if (state.view === "note") renderNote();
+  if (state.view === "graph") G.start();
+}
+function show(v){
+  state.view = v;
+  document.querySelectorAll(".view").forEach(el => el.hidden = el.id !== "view-" + v);
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v || (v === "note" && b.dataset.view === "home"))));
+  if (v === "graph") G.start(); else G.stop();
+  if (v === "note") renderNote();
+  window.scrollTo(0, 0);
+}
+function openNote(id, edit){ if (state.view !== "note") state.backTo = state.view; state.open = id; state.edit = !!edit; show("note"); }
+
+/* ───── 行軍表・常任評議会へ送る ───── */
+async function sha1Id(name, date){
+  const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(name.trim() + "|" + date));
+  return "t" + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 10);
+}
+async function sendToTask(n){
+  const name = titleOf(n), d = today(), id = await sha1Id(name, d);
+  const task = { id, name, aliases: [], ministries: [], waves: [], slot: "一日中", stance: "攻", kind: "完了型", interval: "", weight: null, quota: null,
+    requirement: (n.text || "").split("\n").slice(1).join(" ").slice(0, 120), created: d, initial: { status: "新規" },
+    generations: [{ gen: 1, from: d, target: null }], events: [] };
+  for (let i = 0; i < 3; i++) {
+    const r = await readJson("roadmap/tasks/overlay.json");
+    const ov = r.data || { version: 1, tasks: {}, newTasks: [] };
+    ov.newTasks = ov.newTasks || [];
+    if (ov.newTasks.some(t => t.name === name)) return "行軍表にもう同じ名前のタスクがあります";
+    ov.newTasks.push(task);
+    try { await writeJson("roadmap/tasks/overlay.json", ov, r.sha, "思案からタスクを作成"); return "行軍表に「" + name + "」を新規のタスクとして作りました(" + d + ")"; }
+    catch (e) { if (e.status !== 409 && e.status !== 422) throw e; }
+  }
+  throw new Error("保存できませんでした");
+}
+async function sendToAgenda(n){
+  const name = titleOf(n), d = today();
+  for (let i = 0; i < 3; i++) {
+    const r = await readJson("roadmap/gov/councils.json");
+    const c = Object.assign({ supreme: [], standing: [] }, r.data || {});
+    c.standing.push({ id: uid(), title: name, created: d, status: "審議中", discussion: n.text || "", decision: "", orders: [], from: "思案" });
+    try { await writeJson("roadmap/gov/councils.json", c, r.sha, "思案から議題を作成"); return "常任評議会に「" + name + "」を議題として立てました(" + d + ")"; }
+    catch (e) { if (e.status !== 409 && e.status !== 422) throw e; }
+  }
+  throw new Error("保存できませんでした");
+}
+
+/* ───── つながりの図(力で配置) ───── */
+const G = (() => {
+  const cv = () => document.getElementById("graph");
+  let nodes = [], edges = [], raf = null, view = { x: 0, y: 0, k: 1 }, drag = null, alpha = 1, w = 0, h = 0, dpr = 1, pointers = new Map(), pinch = null;
+  const pos = {};   // 位置を覚えておく(開き直しても動かない)
+  function build(){
+    const ns = notes();
+    nodes = ns.map(n => {
+      const p = pos[n.id] || (pos[n.id] = { x: (rnd(1000) - 500) / 3, y: (rnd(1000) - 500) / 3, vx: 0, vy: 0 });
+      return { id: n.id, n, p, r: 5 + Math.min(14, Math.sqrt(degree(n)) * 4) };
+    });
+    const idx = Object.fromEntries(nodes.map((x, i) => [x.id, i]));
+    const seen = new Set(); edges = [];
+    for (const n of ns) for (const t of linksOf(n)) { const k = [n.id, t].sort().join("|"); if (!seen.has(k) && idx[t] != null) { seen.add(k); edges.push([idx[n.id], idx[t]]); } }
+  }
+  function resize(){
+    const c = cv(); if (!c) return;
+    dpr = window.devicePixelRatio || 1; w = c.clientWidth || 600; h = c.clientHeight || 400;
+    c.width = w * dpr; c.height = h * dpr;
+  }
+  function step(){
+    const N = nodes.length;
+    for (let i = 0; i < N; i++) {
+      const a = nodes[i].p;
+      for (let j = i + 1; j < N; j++) {
+        const b = nodes[j].p; let dx = a.x - b.x, dy = a.y - b.y;
+        if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) { dx = (i - j) * 0.5 + 0.3; dy = (j % 3) - 1 + 0.2; }   // 完全に重なったら少しずらす
+        const d2 = dx * dx + dy * dy + 0.01;
+        if (d2 > 90000) continue;
+        const f = 900 / d2; dx *= f; dy *= f; a.vx += dx; a.vy += dy; b.vx -= dx; b.vy -= dy;
+      }
+      a.vx -= a.x * 0.002; a.vy -= a.y * 0.002;       // 真ん中へ
+    }
+    for (const [i, j] of edges) {
+      const a = nodes[i].p, b = nodes[j].p, dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 1, f = (d - 70) * 0.02;
+      const fx = dx / d * f, fy = dy / d * f; a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+    }
+    for (const nd of nodes) {
+      if (drag && drag.node === nd) { nd.p.vx = 0; nd.p.vy = 0; continue; }
+      nd.p.vx *= 0.82; nd.p.vy *= 0.82;
+      nd.p.x += nd.p.vx * alpha; nd.p.y += nd.p.vy * alpha;
+    }
+    alpha = Math.max(0.02, alpha * 0.985);
+  }
+  const toScreen = p => [(p.x * view.k + view.x) + w / 2, (p.y * view.k + view.y) + h / 2];
+  const toWorld = (sx, sy) => [((sx - w / 2) - view.x) / view.k, ((sy - h / 2) - view.y) / view.k];
+  function draw(){
+    const c = cv(); if (!c) return; const g = c.getContext("2d"); if (!g || !g.setTransform) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    g.lineWidth = 1; g.strokeStyle = "rgba(157,184,255,0.28)";
+    for (const [i, j] of edges) { const [x1, y1] = toScreen(nodes[i].p), [x2, y2] = toScreen(nodes[j].p); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+    for (const nd of nodes) {
+      const [x, y] = toScreen(nd.p), r = nd.r * Math.sqrt(view.k), col = COLOR[nd.n.stage] || COLOR["種"];
+      g.globalAlpha = sleeping(nd.n) ? 0.35 : 1;
+      g.shadowColor = col; g.shadowBlur = 12; g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.shadowBlur = 0;
+      if (view.k > 0.7 || nd.r > 9) { g.fillStyle = "rgba(232,230,242,0.9)"; g.font = (11 + Math.min(4, nd.r / 4)) + "px 'Zen Maru Gothic',sans-serif"; g.textAlign = "center";
+        const t = titleOf(nd.n); g.fillText(t.length > 14 ? t.slice(0, 14) + "…" : t, x, y + r + 13); }
+      g.globalAlpha = 1;
+    }
+  }
+  function loop(){ step(); draw(); raf = requestAnimationFrame(loop); }
+  function hit(sx, sy){ let best = null, bd = 1e9; for (const nd of nodes) { const [x, y] = toScreen(nd.p), d = Math.hypot(x - sx, y - sy); if (d < Math.max(14, nd.r * Math.sqrt(view.k) + 6) && d < bd) { bd = d; best = nd; } } return best; }
+  function fit(){
+    if (!nodes.length) return;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const nd of nodes) { x0 = Math.min(x0, nd.p.x); y0 = Math.min(y0, nd.p.y); x1 = Math.max(x1, nd.p.x); y1 = Math.max(y1, nd.p.y); }
+    const k = Math.min(2, Math.max(0.2, Math.min(w / ((x1 - x0) + 120), h / ((y1 - y0) + 120))));
+    view = { k, x: -((x0 + x1) / 2) * k, y: -((y0 + y1) / 2) * k };
+  }
+  function bind(){
+    const c = cv(); if (!c || c.__bound) return; c.__bound = true;
+    const local = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    c.addEventListener("pointerdown", e => {
+      c.setPointerCapture && c.setPointerCapture(e.pointerId);
+      const [sx, sy] = local(e); pointers.set(e.pointerId, [sx, sy]);
+      if (pointers.size === 2) { const [a, b] = Array.from(pointers.values()); pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: view.k }; drag = null; return; }
+      const nd = hit(sx, sy);
+      drag = { node: nd, sx, sy, vx: view.x, vy: view.y, moved: false }; alpha = Math.max(alpha, 0.3);
+    });
+    c.addEventListener("pointermove", e => {
+      const [sx, sy] = local(e); if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [sx, sy]);
+      if (pinch && pointers.size === 2) { const [a, b] = Array.from(pointers.values()); view.k = Math.min(4, Math.max(0.15, pinch.k * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d)); return; }
+      if (!drag) return;
+      if (Math.hypot(sx - drag.sx, sy - drag.sy) > 4) drag.moved = true;
+      if (drag.node) { const [wx, wy] = toWorld(sx, sy); drag.node.p.x = wx; drag.node.p.y = wy; alpha = Math.max(alpha, 0.3); }
+      else { view.x = drag.vx + (sx - drag.sx); view.y = drag.vy + (sy - drag.sy); }
+    });
+    const up = e => {
+      pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null;
+      if (drag && !drag.moved && drag.node) openNote(drag.node.id);
+      drag = null;
+    };
+    c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
+    c.addEventListener("wheel", e => { e.preventDefault(); const f = Math.exp(-e.deltaY * 0.0015); view.k = Math.min(4, Math.max(0.15, view.k * f)); }, { passive: false });
+    window.addEventListener("resize", () => { if (raf) resize(); });
+  }
+  return {
+    start(){ resize(); build(); bind(); alpha = 1; if (!raf) { for (let i = 0; i < 120; i++) step(); fit(); raf = requestAnimationFrame(loop); } },
+    stop(){ if (raf) cancelAnimationFrame(raf); raf = null; },
+    fit(){ fit(); },
+    _state: () => ({ nodes, edges }), _hit: hit, _toScreen: p => toScreen(p),
+  };
+})();
+
+/* ───── 操作 ───── */
+function bind(){
+  document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => { render(); show(b.dataset.view); }));
+  document.getElementById("capture").addEventListener("submit", async e => {
+    e.preventDefault();
+    const inp = document.getElementById("cap"), t = inp.value.trim(); if (!t) return;
+    inp.value = "";
+    await commit(doc => { doc.notes.push(newNote(t)); }, "home-status");
+    say("home-status", "書きました");
+    inp.focus();
+  });
+  const onOpen = e => { const b = e.target.closest("[data-open]"); if (b) openNote(b.dataset.open); };
+  ["home", "list"].forEach(id => document.getElementById(id).addEventListener("click", onOpen));
+  document.getElementById("q").addEventListener("input", renderList);
+  document.getElementById("fs").addEventListener("change", renderList);
+  document.getElementById("mix").addEventListener("click", async () => {
+    const pool = notes().filter(n => !sleeping(n));
+    if (pool.length < 2) { alert("思案が2つ以上あると掛け合わせられます。"); return; }
+    const a = pool[rnd(pool.length)]; let b = pool[rnd(pool.length)]; let guard = 0;
+    while (b.id === a.id && guard++ < 20) b = pool[rnd(pool.length)];
+    if (b.id === a.id) b = pool.find(x => x.id !== a.id);
+    const n = newNote("「" + titleOf(a) + "」×「" + titleOf(b) + "」\nこの2つを組み合わせると?\n[[" + titleOf(a) + "]] [[" + titleOf(b) + "]]\n", { links: [a.id, b.id], prompt: "この2つを組み合わせると?" });
+    await commit(doc => { doc.notes.push(n); });
+    openNote(n.id, true);
+  });
+  document.getElementById("note").addEventListener("click", async e => {
+    const q = s => e.target.closest(s);
+    const n = byId(state.open); if (!n) return;
+    let b;
+    if (q("[data-back]")) { show(state.backTo || "home"); return; }
+    if ((b = q("[data-wl]"))) {
+      const t = b.dataset.wl.replace(/&amp;/g, "&");
+      const hitN = byTitle(t);
+      if (hitN) { openNote(hitN.id); return; }
+      const nn = newNote(t, { links: [] });
+      await commit(doc => { doc.notes.push(nn); });
+      openNote(nn.id, true); return;
+    }
+    if ((b = q("[data-open]"))) { openNote(b.dataset.open); return; }
+    if (q("[data-edit]")) { state.edit = true; renderNote(); const ta = document.getElementById("n-text"); if (ta) ta.focus(); return; }
+    if (q("[data-cancel]")) { state.edit = false; renderNote(); return; }
+    if (q("[data-save]")) {
+      const text = document.getElementById("n-text").value;
+      if (!text.trim()) { say("note-status", "何か書いてください。", true); return; }
+      await commit(doc => { const x = doc.notes.find(y => y.id === n.id); if (x) { x.text = text; x.updated = new Date().toISOString(); if (x.stage === "種" && text.split("\n").filter(l => l.trim()).length > 2) x.stage = "芽"; } }, "note-status");
+      state.edit = false; renderNote(); return;
+    }
+    if ((b = q("[data-stage]"))) { const s = b.dataset.stage; await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.stage = s; x.updated = new Date().toISOString(); }); return; }
+    if (q("[data-ask]")) {
+      const p = PROMPTS[rnd(PROMPTS.length)];
+      await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.prompt = p; x.text = (x.text || "").replace(/\s+$/, "") + "\n\n問い:" + p + "\n"; x.updated = new Date().toISOString(); });
+      state.edit = true; renderNote(); return;
+    }
+    if ((b = q("[data-sleep]"))) { const until = addDays(today(), +b.dataset.sleep); await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.snoozeUntil = until; x.wokeSeen = false; }); say("note-status2", until + " に浮かび上がります"); return; }
+    if (q("[data-wake]")) { await commit(doc => { const x = doc.notes.find(y => y.id === n.id); delete x.snoozeUntil; delete x.wokeSeen; }); return; }
+    if (q("[data-link]")) { const to = document.getElementById("link-to").value; await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.links = Array.from(new Set((x.links || []).concat([to]))); }); return; }
+    if (q("[data-to-task]") || q("[data-to-agenda]")) {
+      const toTask = !!q("[data-to-task]");
+      try {
+        const msg = toTask ? await sendToTask(n) : await sendToAgenda(n);
+        await commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.sent = msg; x.stage = "実行へ"; });
+      } catch (err) { say("note-status2", err.message, true); }
+      return;
+    }
+    if (q("[data-del]")) {
+      if (!confirm("「" + titleOf(n) + "」を消しますか。つながりも外れます。")) return;
+      await commit(doc => { doc.notes = doc.notes.filter(y => y.id !== n.id); doc.notes.forEach(y => { if (y.links) y.links = y.links.filter(l => l !== n.id); }); });
+      show("home"); return;
+    }
+  });
+  // 寝かせ明けを開いたら、寝かせ明けの欄からは外す
+  document.getElementById("home").addEventListener("click", async e => {
+    const b = e.target.closest("[data-open]"); if (!b) return;
+    const n = byId(b.dataset.open);
+    if (n && n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen) commit(doc => { const x = doc.notes.find(y => y.id === n.id); x.wokeSeen = true; });
+  });
+  document.getElementById("g-fit").addEventListener("click", () => G.fit());
+  document.getElementById("connect").addEventListener("click", async () => {
+    const v = id => document.getElementById(id).value.trim();
+    state.conn = { owner: v("c-owner"), repo: v("c-repo"), branch: v("c-branch") || "main", token: v("c-token") };
+    lsSet(KEY_CONN, state.conn);
+    if (await load()) show("home");
+  });
+  document.getElementById("reload").addEventListener("click", load);
+}
+function boot(){
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+  bind();
+  document.getElementById("ver").textContent = "版 " + APP_VERSION;
+  const c = lsGet(KEY_CONN, null);
+  document.getElementById("c-owner").value = c ? c.owner : "nisenonamae";
+  document.getElementById("c-repo").value = c ? c.repo : "notion-daily";
+  document.getElementById("c-branch").value = c ? c.branch : "main";
+  document.getElementById("c-token").value = c ? c.token : "";
+  const cache = lsGet(KEY_CACHE, null);
+  if (cache && cache.doc) { state.doc = cache.doc; state.sha = cache.sha; render(); }
+  if (c && c.token) { state.conn = c; load(); } else show("settings");
+}
+window.__shian = { state, G, linksOf, backlinksOf, titleOf, load };
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+})();
+</script>
+</body>
+</html>

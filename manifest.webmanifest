@@ -1,0 +1,19 @@
+{
+  "id": "/shian/",
+  "name": "思案",
+  "short_name": "思案",
+  "description": "自由な発想を書き留め、つなぎ、育てる",
+  "start_url": "/shian/",
+  "scope": "/shian/",
+  "display": "standalone",
+  "background_color": "#0E1224",
+  "theme_color": "#0E1224",
+  "orientation": "portrait",
+  "lang": "ja",
+  "icons": [
+    { "src": "/shian/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/shian/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/shian/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/shian/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
