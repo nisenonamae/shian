@@ -45,7 +45,7 @@ h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
 .empty{color:var(--sub);font-size:.9rem;padding:.6rem 0}
 .status{font-size:.84rem;color:var(--sub)}.status.err{color:var(--go)}
 .back{border:none;background:none;color:var(--sub);cursor:pointer;padding:0;margin-bottom:.6rem}
-textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8}
+textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8;overflow-y:hidden;resize:none}
 .render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
 .render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
 .render .h{display:block;font-weight:700;margin:.5rem 0 .1rem;color:var(--plan)}
@@ -179,7 +179,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r4";
+const APP_VERSION = "2026-10-09 r5";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -503,7 +503,17 @@ function renderNote(){
   }
   h += '<div style="margin-top:1rem"><button type="button" class="btn danger sm" data-del>消す</button></div><span class="status" id="note-status2"></span>';
   box.innerHTML = h;
+  // 書き直すときも全文が見えるように、本文の欄を文章の長さに合わせて伸ばす(欄の中ではスクロールしない)
+  const ta = document.getElementById("n-text");
+  if (ta) { fitArea(ta); ta.addEventListener("input", () => fitArea(ta)); }
 }
+function fitArea(ta){
+  const y = window.scrollY || 0;
+  ta.style.height = "auto";
+  ta.style.height = Math.max(ta.scrollHeight + 4, 192) + "px";
+  try { if ((window.scrollY || 0) !== y) window.scrollTo(0, y); } catch (e) {}
+}
+window.addEventListener("resize", () => { const ta = document.getElementById("n-text"); if (ta) fitArea(ta); });
 function renderLib(){
   const box = document.getElementById("lib");
   const shelves = state.doc.shelves || DEFAULT_SHELVES;
