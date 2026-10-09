@@ -45,6 +45,7 @@ h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
 .empty{color:var(--sub);font-size:.9rem;padding:.6rem 0}
 .status{font-size:.84rem;color:var(--sub)}.status.err{color:var(--go)}
 .back{border:none;background:none;color:var(--sub);cursor:pointer;padding:0;margin-bottom:.6rem}
+.nograph-note{font-size:.76rem;color:var(--sub);margin:.3rem 0 0}.graph-hidden{font-size:.76rem;color:var(--sub);margin:-.3rem 0 .4rem}
 textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8;overflow-y:hidden;resize:none}
 .render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
 .render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
@@ -135,6 +136,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
   <section class="view" id="view-lib" hidden><div id="lib"></div></section>
   <section class="view" id="view-graph" hidden>
     <h1>つながり</h1>
+    <p class="graph-hidden" id="graph-hidden"></p>
     <div class="legend"><span><i class="dot" style="color:var(--seed);background:var(--seed)"></i>種</span><span><i class="dot" style="color:var(--sprout);background:var(--sprout)"></i>芽</span>
       <span><i class="dot" style="color:var(--plan);background:var(--plan)"></i>構想</span><span><i class="dot" style="color:var(--go);background:var(--go)"></i>実行へ</span>
       <span><i class="dot" style="color:var(--memo);background:var(--memo)"></i>メモ</span><span><i class="dot" style="color:var(--remind);background:var(--remind)"></i>リマインダー</span>
@@ -179,7 +181,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r5";
+const APP_VERSION = "2026-10-09 r6";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -469,8 +471,10 @@ function renderNote(){
   h += '<div class="row-btns">' +
     (isLib ? '<span class="pill">' + esc(n.shelf) + "</span>" : '<select id="kind-sel" aria-label="種類" style="background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.2rem .4rem">' + KINDS.map(x => "<option" + (x === k ? " selected" : "") + ">" + x + "</option>").join("") + "</select>") +
     '<button type="button" class="btn quiet sm" data-pin>' + (n.pinned ? "ピンを外す" : "ピン留め") + "</button>" +
+    '<button type="button" class="btn quiet sm" data-graph-toggle aria-pressed="' + !n.noGraph + '" title="事務的なメモは、つながりの図に出さないようにできます">' + (n.noGraph ? "つながりに出す" : "つながりに出さない") + "</button>" +
     (n.inbox ? '<button type="button" class="btn quiet sm" data-tidy>整理済みにする</button>' : "") +
-    '<button type="button" class="btn quiet sm" data-archive>' + (n.archived ? "しまったものから戻す" : "しまう") + "</button></div>";
+    '<button type="button" class="btn quiet sm" data-archive>' + (n.archived ? "しまったものから戻す" : "しまう") + "</button></div>" +
+    (n.noGraph ? '<p class="nograph-note">つながりに出していません(事務的なメモ)。</p>' : "");
   if (k === "リマインダー") {
     const r = n.remind || {};
     h += '<div class="card"><h2>リマインダー</h2>' + (r.done ? '<p>済み(' + esc(r.doneAt || "") + ')</p><button type="button" class="btn quiet sm" data-rem-undo>済みを取り消す</button>' :
@@ -628,7 +632,9 @@ const G = (() => {
   let nodes = [], edges = [], raf = null, view = { x: 0, y: 0, k: 1 }, drag = null, alpha = 1, w = 0, h = 0, dpr = 1, pointers = new Map(), pinch = null;
   const pos = {};   // 位置を覚えておく(開き直しても動かない)
   function build(){
-    const ns = notes().filter(n => live(n) && !sealed(n));
+    const all = notes().filter(n => live(n) && !sealed(n)), ns = all.filter(n => !n.noGraph);
+    const hid = document.getElementById("graph-hidden"), nh = all.length - ns.length;
+    if (hid) hid.textContent = nh ? "つながりに出していないもの " + nh + "件" : "";
     nodes = ns.map(n => {
       const p = pos[n.id] || (pos[n.id] = { x: (rnd(1000) - 500) / 3, y: (rnd(1000) - 500) / 3, vx: 0, vy: 0 });
       return { id: n.id, n, p, r: 5 + Math.min(14, Math.sqrt(degree(n)) * 4) };
@@ -824,6 +830,7 @@ function bind(){
     if (q("[data-copy-body]")) { copyText(textOf(n).split("\n").slice(1).join("\n")); return; }
     if ((b = q("[data-reveal]"))) { state.revealed[b.dataset.reveal] = !state.revealed[b.dataset.reveal]; renderNote(); return; }
     if (q("[data-pin]")) { await commit(mut(n.id, x => { x.pinned = !x.pinned; })); return; }
+    if (q("[data-graph-toggle]")) { await commit(mut(n.id, x => { if (x.noGraph) delete x.noGraph; else x.noGraph = true; })); return; }
     if (q("[data-tidy]")) { await commit(mut(n.id, x => { x.inbox = false; })); return; }
     if (q("[data-archive]")) { await commit(mut(n.id, x => { x.archived = !x.archived; x.inbox = false; })); return; }
     if ((b = q("[data-rq]"))) { const el = document.getElementById("r-date"); if (el) el.value = b.dataset.rq; return; }
@@ -1075,6 +1082,7 @@ SE.init([
   ["[data-tidy], [data-entry-new], [data-fadd], [data-shelf-add], [data-vault-create], [data-q-add], #q-add, [data-key-done], [data-rem-save]", "save"],
   ["[data-del], [data-fdel], [data-q-del]", "remove"],
   ["[data-pin], [data-wake]", "toggleOn"],
+  ["[data-graph-toggle]", el => el.getAttribute("aria-pressed") === "true" ? "toggleOff" : "toggleOn"],
   ["[data-open], #connect, #reload", "open"],
   ["[data-view], nav button", "tab"]
 ]);
