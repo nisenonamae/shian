@@ -46,6 +46,9 @@ h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
 .status{font-size:.84rem;color:var(--sub)}.status.err{color:var(--go)}
 .back{border:none;background:none;color:var(--sub);cursor:pointer;padding:0;margin-bottom:.6rem}
 .nograph-note{font-size:.76rem;color:var(--sub);margin:.3rem 0 0}.graph-hidden{font-size:.76rem;color:var(--sub);margin:-.3rem 0 .4rem}
+.fdrag{touch-action:none;cursor:grab;border:none;background:transparent;color:var(--sub);font-size:1.1rem;padding:0 .3rem;line-height:1}
+.fedit.dragging{opacity:.75;outline:1px dashed var(--sub);border-radius:8px}.fedit.dragging .fdrag{cursor:grabbing}
+.fmove{display:inline-flex;gap:.15rem}.fmove .btn{padding:.1rem .35rem}
 textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8;overflow-y:hidden;resize:none}
 .render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
 .render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
@@ -88,7 +91,7 @@ textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px soli
 .field .v{flex:1;min-width:0;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
 .field .v.hide{letter-spacing:.2em}
 pre.code{background:#0A0E1C;border:1px solid var(--rule);border-radius:8px;padding:.7rem;overflow-x:auto;font-size:.84rem;line-height:1.5;margin:.4rem 0;white-space:pre}
-.fedit{display:grid;grid-template-columns:1fr 2fr auto;gap:.3rem;margin:.25rem 0}
+.fedit{display:grid;grid-template-columns:auto 1fr 2fr auto auto;gap:.3rem;margin:.25rem 0;align-items:center}
 .fedit input{background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.35rem .5rem;min-width:0}
 .key{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.15rem;letter-spacing:.08em;background:#0A0E1C;border:1px dashed var(--vault);border-radius:8px;padding:.7rem;text-align:center;word-break:break-all;color:var(--vault)}
 #graph-wrap{position:relative;height:calc(100vh - 150px);min-height:360px;border:1px solid var(--rule);border-radius:12px;overflow:hidden;
@@ -181,7 +184,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r6";
+const APP_VERSION = "2026-10-09 r7";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -459,7 +462,7 @@ function renderNote(){
     h += '<textarea class="body" id="n-text" aria-label="本文">' + esc(p.text) + "</textarea>" +
       '<p style="font-size:.76rem;color:var(--sub);margin:.3rem 0">1行目が名前。「# 見出し」「- 箇条書き」「- [ ] チェック」「```(コード)```」「#タグ」「[[別のものの名前]]」が使えます。</p>' +
       (isLib ? '<div class="f"><label>項目(名前と値。値の横の「写す」で取り出せる)</label><div id="fedit">' + (p.fields || []).map((f, i) =>
-          '<div class="fedit"><input data-fk="' + i + '" value="' + esc(f.k) + '" placeholder="項目名"><input data-fv="' + i + '" value="' + esc(f.v) + '" placeholder="値"' + (n.shelf === VAULT ? ' type="password"' : "") + '><button type="button" class="btn quiet sm" data-fdel="' + i + '">外す</button></div>').join("") +
+          '<div class="fedit"><button type="button" class="fdrag" data-fdrag aria-label="つまんで並び替える" title="つまんで上下に動かす">⠿</button><input data-fk="' + i + '" value="' + esc(f.k) + '" placeholder="項目名"><input data-fv="' + i + '" value="' + esc(f.v) + '" placeholder="値"' + (n.shelf === VAULT ? ' type="password"' : "") + '><span class="fmove"><button type="button" class="btn quiet sm" data-fup aria-label="上へ">▲</button><button type="button" class="btn quiet sm" data-fdown aria-label="下へ">▼</button></span><button type="button" class="btn quiet sm" data-fdel="' + i + '">外す</button></div>').join("") +
         '</div><button type="button" class="btn quiet sm" data-fadd>項目を足す</button></div>' : "") +
       '<div style="display:flex;gap:.5rem;align-items:center;margin-top:.6rem"><button type="button" class="btn sm" data-save>保存</button><button type="button" class="btn quiet sm" data-cancel>やめる</button><span class="status" id="note-status"></span></div>';
   } else {
@@ -625,6 +628,30 @@ async function sendToAgenda(n){
   }
   throw new Error("保存できませんでした");
 }
+
+
+// ───── 書庫の項目の並び替え(つまみ ⠿ をつまんで上下に) ─────
+function renumberFields(){ Array.from(document.querySelectorAll("#fedit .fedit")).forEach((r, i) => { const d = r.querySelector("[data-fdel]"); if (d) d.dataset.fdel = i; }); }
+(function(){
+  let drag = null;
+  document.addEventListener("pointerdown", e => {
+    const h = e.target.closest && e.target.closest("[data-fdrag]"); if (!h) return;
+    const row = h.closest(".fedit"); if (!row) return;
+    e.preventDefault(); drag = { row, id: e.pointerId }; row.classList.add("dragging");
+    try { h.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  document.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    const box = drag.row.parentNode, rows = Array.from(box.querySelectorAll(".fedit")).filter(r => r !== drag.row);
+    let before = null;
+    for (const r of rows) { const b = r.getBoundingClientRect(); if (e.clientY < b.top + b.height / 2) { before = r; break; } }
+    if (before) { if (drag.row.nextElementSibling !== before) box.insertBefore(drag.row, before); }
+    else if (box.lastElementChild !== drag.row) box.appendChild(drag.row);
+  }, { passive: false });
+  const end = e => { if (!drag || (e.pointerId != null && e.pointerId !== drag.id)) return; drag.row.classList.remove("dragging"); drag = null; renumberFields(); };
+  document.addEventListener("pointerup", end); document.addEventListener("pointercancel", end);
+})();
 
 /* ───── つながりの図(力で配置) ───── */
 const G = (() => {
@@ -808,6 +835,11 @@ function bind(){
     if (q("[data-edit]")) { state.edit = true; renderNote(); const ta = document.getElementById("n-text"); if (ta) ta.focus(); return; }
     if (q("[data-cancel]")) { state.edit = false; renderNote(); return; }
     const readFields = () => Array.from(document.querySelectorAll("#fedit .fedit")).map(r => ({ k: r.querySelector("[data-fk]").value.trim(), v: r.querySelector("[data-fv]").value })).filter(f => f.k || f.v);
+    if ((b = q("[data-fup]")) || (b = q("[data-fdown]"))) {
+      const row = b.closest(".fedit"), up = b.hasAttribute("data-fup"), sib = up ? row.previousElementSibling : row.nextElementSibling;
+      if (sib) { up ? row.parentNode.insertBefore(row, sib) : row.parentNode.insertBefore(sib, row); renumberFields(); }
+      return;
+    }
     if (q("[data-fadd]") || (b = q("[data-fdel]"))) {
       const text = document.getElementById("n-text").value, fields = readFields();
       if (b) fields.splice(+b.dataset.fdel, 1); else fields.push({ k: "", v: "" });
