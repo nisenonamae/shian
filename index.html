@@ -48,7 +48,8 @@ h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
 .nograph-note{font-size:.76rem;color:var(--sub);margin:.3rem 0 0}.graph-hidden{font-size:.76rem;color:var(--sub);margin:-.3rem 0 .4rem}
 .fdrag{touch-action:none;cursor:grab;border:none;background:transparent;color:var(--sub);font-size:1.1rem;padding:0 .3rem;line-height:1}
 .fedit.dragging{opacity:.75;outline:1px dashed var(--sub);border-radius:8px}.fedit.dragging .fdrag{cursor:grabbing}
-.fmove{display:inline-flex;gap:.15rem}.fmove .btn{padding:.1rem .35rem}
+.fmove{display:inline-flex;gap:.15rem}
+.lrow{display:flex;align-items:center;gap:.4rem;padding:.45rem .2rem;border-bottom:1px solid var(--rule)}.lrow:last-child{border-bottom:none}.lrow .lt{flex:1}.lrow.dragging{opacity:.75;outline:1px dashed var(--sub);border-radius:8px}.fmove .btn{padding:.1rem .35rem}
 textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8;overflow-y:hidden;resize:none}
 .render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
 .render .ttl{font-size:1.15rem;font-weight:700;display:block;margin-bottom:.3rem}
@@ -184,7 +185,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r7";
+const APP_VERSION = "2026-10-09 r8";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -538,9 +539,18 @@ function renderLib(){
   else if (isVault && !state.vaultKey) h += '<div class="card"><h2>金庫を開ける</h2><div class="f"><label id="ul-label">合言葉</label><input id="ul-secret" type="password" autocomplete="off"></div>' +
       '<div class="row-btns"><button type="button" class="btn sm" data-unlock>開ける</button><label style="font-size:.84rem;display:flex;gap:.3rem;align-items:center"><input type="checkbox" id="ul-rec"> 予備の鍵で開ける</label></div><span class="status" id="ul-status"></span></div>';
   else {
-    const list = notes().filter(n => live(n) && kindOf(n) === "書庫" && n.shelf === s).sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || titleOf(a).localeCompare(titleOf(b), "ja"));
-    h += '<div class="row-btns"><button type="button" class="btn sm" data-entry-new>項目を足す</button>' + (isVault ? '<button type="button" class="btn quiet sm" data-lock>金庫を閉じる</button>' : "") + "</div>" +
-      '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>";
+    const ord = n => n.libOrder == null ? 1e9 : +n.libOrder;
+    const list = notes().filter(n => live(n) && kindOf(n) === "書庫" && n.shelf === s).sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || (ord(a) - ord(b)) || titleOf(a).localeCompare(titleOf(b), "ja"));
+    if (state.libSort === s) {
+      h += '<p class="panel-e" style="font-size:.8rem;color:var(--sub)">⠿ をつまんで動かすか、▲▼で並べて、「この並びにする」を押します。</p>' +
+        '<div class="card" id="lib-sort">' + list.map(n => '<div class="lrow" data-lid="' + esc(n.id) + '"><button type="button" class="fdrag" data-ldrag aria-label="つまんで並び替える">⠿</button><span class="lt">' + (n.pinned ? "📌 " : "") + esc(titleOf(n)) +
+          '</span><span class="fmove"><button type="button" class="btn quiet sm" data-lup aria-label="上へ">▲</button><button type="button" class="btn quiet sm" data-ldown aria-label="下へ">▼</button></span></div>').join("") + "</div>" +
+        '<div class="row-btns"><button type="button" class="btn sm" data-lib-sort-save>この並びにする</button><button type="button" class="btn quiet sm" data-lib-sort-x>やめる</button></div>';
+    } else {
+      h += '<div class="row-btns"><button type="button" class="btn sm" data-entry-new>項目を足す</button>' + (list.length > 1 ? '<button type="button" class="btn quiet sm" data-lib-sort>並び替え</button>' : "") +
+        (isVault ? '<button type="button" class="btn quiet sm" data-lock>金庫を閉じる</button>' : "") + "</div>" +
+        '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">まだありません。</div>') + "</div>";
+    }
   }
   box.innerHTML = h;
 }
@@ -635,15 +645,15 @@ function renumberFields(){ Array.from(document.querySelectorAll("#fedit .fedit")
 (function(){
   let drag = null;
   document.addEventListener("pointerdown", e => {
-    const h = e.target.closest && e.target.closest("[data-fdrag]"); if (!h) return;
-    const row = h.closest(".fedit"); if (!row) return;
+    const h = e.target.closest && e.target.closest("[data-fdrag], [data-ldrag]"); if (!h) return;
+    const row = h.closest(".fedit, .lrow"); if (!row) return;
     e.preventDefault(); drag = { row, id: e.pointerId }; row.classList.add("dragging");
     try { h.setPointerCapture(e.pointerId); } catch (err) {}
   });
   document.addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
     e.preventDefault();
-    const box = drag.row.parentNode, rows = Array.from(box.querySelectorAll(".fedit")).filter(r => r !== drag.row);
+    const box = drag.row.parentNode, cls = drag.row.classList.contains("lrow") ? ".lrow" : ".fedit", rows = Array.from(box.querySelectorAll(cls)).filter(r => r !== drag.row);
     let before = null;
     for (const r of rows) { const b = r.getBoundingClientRect(); if (e.clientY < b.top + b.height / 2) { before = r; break; } }
     if (before) { if (drag.row.nextElementSibling !== before) box.insertBefore(drag.row, before); }
@@ -902,7 +912,20 @@ function bind(){
     const q = s => e.target.closest(s); let b;
     if ((b = q("[data-open]"))) { openNote(b.dataset.open); return; }
     if ((b = q("[data-shelf]"))) { state.shelf = b.dataset.shelf; renderLib(); return; }
-    if (q("[data-shelf-back]")) { state.shelf = null; renderLib(); return; }
+    if (q("[data-shelf-back]")) { state.shelf = null; state.libSort = null; renderLib(); return; }
+    if (q("[data-lib-sort]")) { state.libSort = state.shelf; renderLib(); return; }
+    if (q("[data-lib-sort-x]")) { state.libSort = null; renderLib(); return; }
+    if ((b = q("[data-lup]")) || (b = q("[data-ldown]"))) {
+      const r = b.closest(".lrow"), up = b.hasAttribute("data-lup"), sib = up ? r.previousElementSibling : r.nextElementSibling;
+      if (sib) up ? r.parentNode.insertBefore(r, sib) : r.parentNode.insertBefore(sib, r);
+      return;
+    }
+    if (q("[data-lib-sort-save]")) {
+      const ids = Array.from(document.querySelectorAll("#lib-sort .lrow")).map(r => r.dataset.lid);
+      state.libSort = null;
+      await commit(doc => { ids.forEach((id, i) => { const x = doc.notes.find(y => y.id === id); if (x) x.libOrder = i; }); });
+      return;
+    }
     if (q("[data-goto-settings]")) { render(); show("settings"); return; }
     if (q("[data-shelf-add]")) { const t = (document.getElementById("shelf-new").value || "").trim(); if (!t || (state.doc.shelves || []).includes(t)) return;
       await commit(doc => { doc.shelves = (doc.shelves || DEFAULT_SHELVES.slice()).concat([t]); }); return; }
