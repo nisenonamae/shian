@@ -49,6 +49,8 @@ h1{margin:0 0 .8rem;font-size:1.3rem;letter-spacing:.2em;font-weight:700}
 .fdrag{touch-action:none;cursor:grab;border:none;background:transparent;color:var(--sub);font-size:1.1rem;padding:0 .3rem;line-height:1}
 .fedit.dragging{opacity:.75;outline:1px dashed var(--sub);border-radius:8px}.fedit.dragging .fdrag{cursor:grabbing}
 .fmove{display:inline-flex;gap:.15rem}
+.rscope{display:inline-flex;gap:.2rem;margin-left:auto}.rscope button{border:1px solid var(--rule);background:transparent;border-radius:999px;padding:.05rem .55rem;font-size:.72rem;color:var(--sub);cursor:pointer}
+.rscope button[aria-pressed="true"]{background:var(--sub);color:var(--deep);border-color:transparent}
 .lrow{display:flex;align-items:center;gap:.4rem;padding:.45rem .2rem;border-bottom:1px solid var(--rule)}.lrow:last-child{border-bottom:none}.lrow .lt{flex:1}.lrow.dragging{opacity:.75;outline:1px dashed var(--sub);border-radius:8px}.fmove .btn{padding:.1rem .35rem}
 textarea.body{width:100%;min-height:12rem;background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem;line-height:1.8;overflow-y:hidden;resize:none}
 .render{background:var(--deep);border:1px solid var(--rule);border-radius:10px;padding:.8rem 1rem;min-height:4rem;cursor:text;word-break:break-word}
@@ -130,7 +132,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
     <h1>探す</h1>
     <div class="filters">
       <input id="q" type="search" placeholder="すべてから探す">
-      <select id="fk"><option value="">すべて</option><option>思案</option><option>メモ</option><option>リマインダー</option><option>書庫</option></select>
+      <select id="fk"><option value="!書庫" selected>書庫以外</option><option value="">すべて</option><option>思案</option><option>メモ</option><option>リマインダー</option><option value="書庫">書庫だけ</option></select>
       <select id="fs"><option value="">ふつう</option><option value="pin">ピン留め</option><option value="inbox">受信箱</option><option value="sleep">寝かせ中</option><option value="archived">しまったもの</option></select>
     </div>
     <div class="tags" id="tagbar"></div>
@@ -185,7 +187,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r8";
+const APP_VERSION = "2026-10-09 r9";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -420,7 +422,11 @@ function renderHome(){
   const woke = all.filter(n => n.snoozeUntil && n.snoozeUntil <= today() && !n.wokeSeen);
   const old = all.filter(n => kindOf(n) === "思案" && !sleeping(n) && n.created < addDays(today(), -2));
   const pick = old.length ? old[(Date.parse(today()) / 864e5) % old.length | 0] : null;
-  const recent = all.filter(n => !sleeping(n) && !n.inbox && !sealed(n)).sort((a, b) => (a.updated < b.updated ? 1 : -1)).slice(0, 8);
+  // 最近:書庫のものが混ざって埋まらないよう、最初は書庫以外。切り替えは覚えておく
+  const stored = lsGet("shian-recent-scope", null), rs = state.recentScope != null ? state.recentScope : (stored == null ? "!書庫" : stored);
+  const inScope = n => rs === "" ? true : rs === "!書庫" ? kindOf(n) !== "書庫" : kindOf(n) === "書庫";
+  const recent = all.filter(n => !sleeping(n) && !n.inbox && !sealed(n) && inScope(n)).sort((a, b) => (a.updated < b.updated ? 1 : -1)).slice(0, 8);
+  const scopeSw = '<span class="rscope">' + [["!書庫", "書庫以外"], ["", "すべて"], ["書庫", "書庫だけ"]].map(([v, l]) => '<button type="button" data-rscope="' + v + '" aria-pressed="' + (rs === v) + '">' + l + "</button>").join("") + "</span>";
   document.getElementById("home").innerHTML =
     (B.over.length ? '<div class="card alert"><h2>期限を過ぎたリマインダー</h2>' + B.over.map(n => remRow(n, true)).join("") + "</div>" : "") +
     (B.now.length ? '<div class="card"><h2>今日のリマインダー</h2>' + B.now.map(n => remRow(n)).join("") + "</div>" : "") +
@@ -429,7 +435,7 @@ function renderHome(){
     (inbox.length ? '<div class="card"><h2><span>受信箱 ' + inbox.length + '</span><button type="button" class="btn quiet sm" data-inbox-all>全部整理済みにする</button></h2>' + inbox.map(row).join("") + "</div>" : "") +
     (woke.length ? '<div class="card"><h2>寝かせ明け</h2>' + woke.map(row).join("") + "</div>" : "") +
     (pick ? '<div class="card"><h2>再会</h2>' + row(pick) + "</div>" : "") +
-    '<div class="card"><h2>最近</h2>' + (recent.length ? recent.map(row).join("") : '<div class="empty">上の欄に、思いついたことや覚えておくことを書いてみてください。</div>') + "</div>";
+    '<div class="card"><h2><span>最近</span>' + scopeSw + "</h2>" + (recent.length ? recent.map(row).join("") : '<div class="empty">上の欄に、思いついたことや覚えておくことを書いてみてください。</div>') + "</div>";
 }
 function renderSearch(){
   const q = (document.getElementById("q").value || "").trim().toLowerCase(), fk = document.getElementById("fk").value, fs = document.getElementById("fs").value;
@@ -438,7 +444,7 @@ function renderSearch(){
     '<button type="button" data-tagf="' + esc(t) + '" aria-pressed="' + (state.tag === t) + '">#' + esc(t) + " " + c + "</button>").join("");
   const hay = n => (textOf(n) + "\n" + ((plainOf(n) || {}).fields || []).map(f => f.k + " " + f.v).join("\n") + "\n" + (n.shelf || "")).toLowerCase();
   const list = notes().filter(n => (fs === "archived" ? n.archived : live(n)) && (!sealed(n) || state.unsealed[n.id]) &&
-    (!q || hay(n).includes(q)) && (!fk || kindOf(n) === fk) && (!state.tag || tagsOf(n).includes(state.tag)) &&
+    (!q || hay(n).includes(q)) && (!fk || (fk === "!書庫" ? kindOf(n) !== "書庫" : kindOf(n) === fk)) && (!state.tag || tagsOf(n).includes(state.tag)) &&
     (!fs || fs === "archived" || (fs === "pin" ? n.pinned : fs === "inbox" ? n.inbox : fs === "sleep" ? sleeping(n) : true)))
     .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || (a.updated < b.updated ? 1 : -1));
   document.getElementById("results").innerHTML = '<div class="card">' + (list.length ? list.map(row).join("") : '<div class="empty">見つかりません。</div>') + "</div>";
@@ -796,6 +802,7 @@ function bind(){
   };
   document.getElementById("home").addEventListener("click", async e => {
     if (e.target.closest("[data-rem-done]") || e.target.closest("[data-rem-later]")) { await remActions(e); return; }
+    { const rb = e.target.closest("[data-rscope]"); if (rb) { state.recentScope = rb.dataset.rscope; lsSet("shian-recent-scope", state.recentScope); renderHome(); return; } }
     if (e.target.closest("[data-inbox-all]")) { await commit(doc => doc.notes.forEach(n => { if (n.inbox) n.inbox = false; })); return; }
     openFrom(e);
   });
