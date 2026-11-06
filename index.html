@@ -150,8 +150,11 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
       <span style="margin-left:auto"><button class="btn quiet sm" type="button" id="g-fit">全体を見る</button></span></div>
     <div id="graph-wrap"><canvas id="graph"></canvas></div>
   </section>
+  <section class="view" id="view-cal" hidden><div id="cal"></div></section>
+
   <section class="view" id="view-settings" hidden>
     <h1>設定</h1>
+    <div class="card"><h2>通知(ntfy)</h2><div id="ntfy-settings"></div></div>
     <div class="card"><h2>金庫</h2><div id="vault-settings"></div></div>
     <div class="card"><h2>問いの束</h2>
       <p style="color:var(--sub);font-size:.84rem;margin:.2rem 0">「問いかける」はこの中から選ばれます。自分の問いを足していけます。外した問いは選ばれません。</p>
@@ -178,6 +181,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 </div>
 <nav class="tabs" role="tablist">
   <button role="tab" aria-selected="true" data-view="home">ホーム</button>
+  <button role="tab" aria-selected="false" data-view="cal">日付<span class="calbadge" id="cal-badge" hidden></span></button>
   <button role="tab" aria-selected="false" data-view="search">探す</button>
   <button role="tab" aria-selected="false" data-view="lib">書庫</button>
   <button role="tab" aria-selected="false" data-view="graph">つながり</button>
@@ -187,7 +191,7 @@ nav.tabs button[aria-selected="true"]{color:var(--plan)}
 <script>
 (function(){
 "use strict";
-const APP_VERSION = "2026-10-09 r9";
+const APP_VERSION = "2026-11-06 r11";
 const KEY_CONN = "shian-conn", KEY_CACHE = "shian-cache", KEY_KIND = "shian-kind";
 const PATH = "roadmap/shian/notes.json";
 const STAGES = ["種", "芽", "構想", "実行へ"];
@@ -367,7 +371,9 @@ async function writeJson(path, obj, sha, msg){
   return (await r.json()).content.sha;
 }
 function say(id, t, err){ const el = document.getElementById(id); if (el) { el.textContent = t; el.classList.toggle("err", !!err); } }
-function normDoc(d){ d = (d && d.notes) ? d : { version: 2, notes: [] }; d.shelves = d.shelves && d.shelves.length ? d.shelves : DEFAULT_SHELVES.slice(); return d; }
+function normDoc(d){ d = (d && d.notes) ? d : { version: 2, notes: [] }; d.shelves = d.shelves && d.shelves.length ? d.shelves : DEFAULT_SHELVES.slice();
+  d.cal = Object.assign({ items: [], dayNotes: {}, weekNotes: {}, monthNotes: {}, habits: [], habitLog: {}, energy: {}, countdowns: [], templates: [], sets: ["学習", "体制", "私生活", "その他"], hidden: [], ntfy: { server: "https://ntfy.sh", topic: "", allDayAt: "08:00" } }, d.cal || {});
+  return d; }
 async function load(){
   if (!state.conn || !state.conn.token) { show("settings"); return false; }
   say("conn-status", "読み込んでいます…");
@@ -376,7 +382,7 @@ async function load(){
     state.doc = normDoc(r.data); state.sha = r.sha;
     if (state.vaultKey) { for (const n of notes()) if (sealed(n)) { try { state.unsealed[n.id] = await unseal(n.sealed); } catch (e) {} } }
     lsSet(KEY_CACHE, { doc: state.doc, sha: state.sha });
-    say("conn-status", "読み込みました"); render(); return true;
+    say("conn-status", "読み込みました"); render(); calSchedule(); return true;
   } catch (e) { say("conn-status", e.message, true); say("home-status", e.message, true); return false; }
 }
 // 保存。別の端末で先に変わっていたら読み直して同じ操作をかけ直す
@@ -580,7 +586,7 @@ function renderVaultSettings(){
     : '<p style="font-size:.86rem;color:var(--sub)">合言葉を変えるときは、書庫の金庫を開けてから(合言葉を忘れたら、予備の鍵で開けられます)。</p><button type="button" class="btn sm" data-goto-vault>金庫を開ける</button>');
 }
 function render(){
-  renderKinds(); renderHome(); renderSearch(); renderLib(); renderPrompts(); renderVaultSettings();
+  renderKinds(); renderHome(); renderSearch(); renderLib(); renderPrompts(); renderVaultSettings(); renderCal(); renderNtfySettings();
   if (state.view === "note") renderNote();
   if (state.view === "graph") G.start();
 }
@@ -593,6 +599,281 @@ function show(v){
   window.scrollTo(0, 0);
 }
 function openNote(id, edit){ if (state.view !== "note") state.backTo = state.view; state.open = id; state.edit = !!edit; show("note"); }
+
+/* ───── 日付:カレンダー・To do・通知 ─────
+   データは同じ notes.json の cal に入る(端末どうしの同期は今までと同じ)。
+   通知は ntfy で送る。ntfy は3日先までなら時刻を決めて予約できるので、開くたびに3日以内の分を予約する */
+const CV = { view: "日", cur: null, sel: null, edit: null, todo: true, notify: false };
+const CAL_VIEWS = ["日", "週", "月", "年", "一覧", "4つの箱", "受信箱"];
+const SET_COLOR = ["#9DB8FF", "#F2C46B", "#7FC79A", "#E58FC4", "#5FC6C0", "#F07F5E", "#C9A227"];
+const WD = ["日", "月", "火", "水", "木", "金", "土"];
+const cal = () => state.doc.cal;
+const wdOf = d => new Date(d + "T12:00:00").getDay();
+const ymd = dt => dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+const setColor = name => SET_COLOR[Math.max(0, cal().sets.indexOf(name)) % SET_COLOR.length];
+const weekStart = d => addDays(d, -((wdOf(d) + 6) % 7));     // 月曜はじまり
+const weekKey = d => weekStart(d);
+const monthKey = d => d.slice(0, 7);
+const visible = it => !(cal().hidden || []).includes(it.set || "その他");
+const hm = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : null; };
+// 繰り返しの次の日
+function calNext(it, from){ const st = d => it.repeat === "日" ? addDays(d, 1) : it.repeat === "週" ? addDays(d, 7) : addMonths(d, 1); let d = it.date; let k = 0; while (d < from && k++ < 2000) d = st(d); return d; }
+// その日に出るもの(繰り返しも)
+function itemsOn(d){ return cal().items.filter(it => it.date && visible(it) && (it.date === d || (it.repeat && it.date < d && calNext(it, d) === d))); }
+const remindersOn = d => notes().filter(n => live(n) && n.remind && !n.remind.done && n.remind.date === d);
+// 通知する時刻(ミリ秒)
+function fireAt(it, d){ const t = it.time || cal().ntfy.allDayAt || "08:00"; const [h, m] = t.split(":").map(Number); const dt = new Date((d || it.date) + "T00:00:00"); dt.setHours(h, m, 0, 0); return dt.getTime() - (+it.before || 0) * 60000; }
+// 見ていない通知:通知の時刻を過ぎて、まだ「見た」にしていないもの
+const unseen = () => cal().items.filter(it => it.notify && it.date && !it.done && !it.seen && fireAt(it, it.repeat ? calNext(it, today()) : it.date) <= nowMs() && (!it.repeat || calNext(it, today()) === today()));
+const overdue = () => cal().items.filter(it => it.todo && !it.done && !it.repeat && it.date && it.date < today());
+
+/* ふつうの文から:「明日15時 ボールペンを買う」「11/20 模試 #学習」「毎週月曜 7時半 ゴミ出し 通知」 */
+function parseQuick(text){
+  let s = " " + text + " ", date = null, time = "", repeat = "", set = "", notify = null;
+  const base = today(), cut = re => { const m = re.exec(s); if (m) s = s.replace(m[0], " "); return m; };
+  let m;
+  if ((m = cut(/#(\S+)/))) set = cal().sets.find(x => x === m[1]) || m[1];
+  if ((m = cut(/毎(日|週|月)/))) repeat = m[1];
+  if ((m = cut(/通知/))) notify = true;
+  if ((m = cut(/(\d{4})-(\d{1,2})-(\d{1,2})/))) date = m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+  else if ((m = cut(/(\d{1,2})月(\d{1,2})日/)) || (m = cut(/(?:^|\s)(\d{1,2})\/(\d{1,2})(?=\s|$)/))) { let y = +base.slice(0, 4); const c = y + "-" + m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0"); date = c < base ? (y + 1) + c.slice(4) : c; }
+  else if ((m = cut(/明後日|あさって/))) date = addDays(base, 2);
+  else if ((m = cut(/明日|あした|あす/))) date = addDays(base, 1);
+  else if ((m = cut(/今日|きょう/))) date = base;
+  else if ((m = cut(/(\d+)日後/))) date = addDays(base, +m[1]);
+  else if ((m = cut(/(来週の?)?([日月火水木金土])曜日?/))) { const w = WD.indexOf(m[2]); let d = addDays(base, 1); while (wdOf(d) !== w) d = addDays(d, 1); if (m[1]) { if (addDays(d, -7) > base && (wdOf(base) + 6) % 7 < (w + 6) % 7) d = addDays(d, 7); else if (d < addDays(weekStart(base), 7)) d = addDays(d, 7); } date = d; }
+  if ((m = cut(/(午前|午後)?(\d{1,2})時(半|(\d{1,2})分)?/))) { let h = +m[2]; if (m[1] === "午後" && h < 12) h += 12; time = String(h).padStart(2, "0") + ":" + (m[3] === "半" ? "30" : String(m[4] || 0).padStart(2, "0")); }
+  else if ((m = cut(/(\d{1,2}):(\d{2})/))) time = m[1].padStart(2, "0") + ":" + m[2];
+  if (repeat && !date) date = base;
+  const title = s.replace(/\s+/g, " ").trim().replace(/^(に|の|は|で)\s*/, "");
+  return { title, date, time, repeat, set, notify };
+}
+
+/* ntfy で送る(?at= で予約。3日先まで) */
+async function ntfySend(title, body, opt){
+  const n = cal().ntfy; if (!n.topic) throw new Error("通知の宛先(トピック)が決まっていません。設定で入れてください");
+  const q = new URLSearchParams({ title, priority: String(opt && opt.prio || 4), tags: (opt && opt.tags) || "calendar" });
+  if (opt && opt.at) q.set("at", String(Math.floor(opt.at / 1000)));
+  if (opt && opt.in) q.set("in", opt.in);
+  if (opt && opt.click) q.set("click", opt.click);
+  const r = await fetch(String(n.server || "https://ntfy.sh").replace(/\/$/, "") + "/" + encodeURIComponent(n.topic) + "?" + q.toString(), { method: "POST", body: body || title });
+  if (!r.ok) throw new Error("通知を送れませんでした(" + r.status + ")");
+  return true;
+}
+const appLink = d => location.origin + location.pathname + "#cal=" + d;
+let calSchedBusy = false;
+// 3日以内に来る通知を予約する(同じ時刻のものは二度送らない)
+async function calSchedule(){
+  if (calSchedBusy || !cal().ntfy.topic || !state.conn) return; calSchedBusy = true;
+  try {
+    const now = nowMs(), lim = now + 3 * 864e5 - 120000, sent = [];
+    for (const it of cal().items) {
+      if (!it.notify || it.done || !it.date) continue;
+      const d = it.repeat ? calNext(it, today()) : it.date, at = fireAt(it, d), key = d + "|" + at;
+      if (at < now + 15000 || at > lim || it.sentKey === key) continue;
+      try { await ntfySend(it.title, (it.time ? it.time + " " : "") + it.title + (it.memo ? "\n" + it.memo : ""), { at, prio: it.big ? 5 : 4, click: appLink(d) }); sent.push([it.id, key]); } catch (e) { say("cal-status", e.message, true); break; }
+    }
+    if (sent.length) await commit(doc => { sent.forEach(([id, key]) => { const x = doc.cal.items.find(y => y.id === id); if (x) x.sentKey = key; }); }, "cal-status");
+  } finally { calSchedBusy = false; }
+}
+setInterval(() => { if (state.doc && state.doc.cal) calSchedule(); }, 30 * 60000);
+// 通知を押して開いたとき(#cal=日付)は、その日を出す
+function calFromHash(){ const m = /^#cal=(\d{4}-\d{2}-\d{2})/.exec(location.hash || ""); if (!m) return; CV.sel = CV.cur = m[1]; CV.view = "日"; setTimeout(() => { show("cal"); renderCal(); }, 0); }
+calFromHash(); window.addEventListener("hashchange", calFromHash);
+
+function calSave(mut){ return commit(doc => mut(doc.cal), "cal-status").then(ok => { calSchedule(); return ok; }); }
+function newItem(p){ return Object.assign({ id: uid(), title: "", date: null, time: "", end: "", todo: true, roadmap: true, done: false, notify: false, before: 0, big: false, repeat: "", set: "その他", imp: false, urg: false, fixed: false, memo: "", created: today() }, p); }
+
+/* ───── 描画 ───── */
+function itemRow(it, d, opt){
+  const done = it.repeat ? (it.doneDates || []).includes(d) : it.done;
+  return '<div class="ci' + (done ? " done" : "") + (it.fixed ? " fixed" : " flex") + '" style="--sc:' + setColor(it.set) + '">' +
+    (it.todo ? '<button type="button" class="cchk' + (done ? " on" : "") + '" data-ci-done="' + esc(it.id) + '" data-d="' + esc(d || "") + '">' + (done ? "✓" : "") + "</button>" : '<span class="cdot"></span>') +
+    '<div class="ct" data-ci-edit="' + esc(it.id) + '"><span>' + (it.time ? "<b>" + esc(it.time) + (it.end ? "–" + esc(it.end) : "") + "</b> " : "") + esc(it.title) + "</span>" +
+    '<small>' + esc(it.set || "") + (it.notify ? " ・🔔" + (it.before ? beforeLabel(it.before) : "") : "") + (it.repeat ? " ・毎" + esc(it.repeat) : "") + (it.todo && it.roadmap !== false && it.date ? " ・行軍表" : "") + (it.carried ? " ・繰り越し" + it.carried + "回" : "") + (it.imp || it.urg ? " ・" + (it.imp ? "重要" : "") + (it.urg ? "緊急" : "") : "") + "</small></div>" +
+    (opt && opt.carry ? '<span class="cops"><button type="button" class="btn sm" data-ci-today="' + esc(it.id) + '">今日へ</button><button type="button" class="btn quiet sm" data-ci-inbox="' + esc(it.id) + '">日付なしへ</button></span>' : "") + "</div>";
+}
+const beforeLabel = m => m >= 1440 ? (m / 1440) + "日前" : m >= 60 ? (m / 60) + "時間前" : m + "分前";
+function quickBar(){
+  const tp = cal().templates || [];
+  return '<div class="cquick"><input id="cq" placeholder="例:明日15時 ボールペンを買う #私生活" autocomplete="off"><button type="button" class="btn sm" data-cq-add>入れる</button></div>' +
+    '<div class="ctog"><button type="button" data-cq-todo aria-pressed="' + CV.todo + '">To do</button><button type="button" data-cq-notify aria-pressed="' + CV.notify + '">🔔 通知</button>' +
+    tp.map(t => '<button type="button" class="tpl" data-tpl="' + esc(t.id) + '">' + esc(t.title) + "</button>").join("") + "</div>";
+}
+function renderCal(){
+  const box = document.getElementById("cal"); if (!box || !state.doc || !state.doc.cal) return;
+  CV.cur = CV.cur || today(); CV.sel = CV.sel || today();
+  const C = cal(), u = unseen();
+  const badge = document.getElementById("cal-badge"); if (badge) { const n = u.length + overdue().length; badge.hidden = !n; badge.textContent = n; }
+  const head = '<div class="chead"><div class="cviews">' + CAL_VIEWS.map(v => '<button type="button" data-cv="' + v + '" aria-pressed="' + (CV.view === v) + '">' + v + (v === "受信箱" && C.items.filter(i => !i.date && !i.done).length ? " " + C.items.filter(i => !i.date && !i.done).length : "") + "</button>").join("") + "</div>" +
+    (["日", "週", "月", "年"].includes(CV.view) ? '<div class="cnav"><button type="button" class="btn quiet sm" data-cnav="-1">‹</button><b>' + esc(navLabel()) + '</b><button type="button" class="btn quiet sm" data-cnav="1">›</button><button type="button" class="btn quiet sm" data-cnav="0">今日</button></div>' : "") +
+    '<div class="csets">' + C.sets.map(x => '<button type="button" data-cset="' + esc(x) + '" aria-pressed="' + !(C.hidden || []).includes(x) + '" style="--sc:' + setColor(x) + '">' + esc(x) + "</button>").join("") + "</div></div>";
+  let body = "";
+  if (CV.view === "日") body = dayView(CV.sel);
+  else if (CV.view === "週") body = weekView();
+  else if (CV.view === "月") body = monthView();
+  else if (CV.view === "年") body = yearView();
+  else if (CV.view === "一覧") body = agendaView();
+  else if (CV.view === "4つの箱") body = boxView();
+  else body = inboxView();
+  box.innerHTML = '<h1>日付</h1>' + quickBar() + head + body + (CV.edit ? editSheet() : "") + '<span class="status" id="cal-status"></span>';
+  if (!box.__bound) { box.__bound = true; box.addEventListener("click", calClick); box.addEventListener("change", calChange); box.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "cq") { e.preventDefault(); quickAdd(); } }); }
+}
+function navLabel(){ const d = CV.view === "日" ? CV.sel : CV.cur;
+  if (CV.view === "日") return md(d) + "(" + WD[wdOf(d)] + ")" + (d === today() ? " 今日" : "");
+  if (CV.view === "週") { const a = weekStart(d); return md(a) + "〜" + md(addDays(a, 6)); }
+  if (CV.view === "月") return d.slice(0, 4) + "年" + (+d.slice(5, 7)) + "月";
+  return d.slice(0, 4) + "年"; }
+function dayView(d){
+  const C = cal(), isToday = d === today();
+  let h = "";
+  if (isToday && unseen().length) h += '<div class="cbox warn"><b>見ていない通知</b>' + unseen().map(it => '<div class="crow">' + esc(it.title) + ' <small>' + esc(it.time || "") + '</small><button type="button" class="btn quiet sm" data-ci-seen="' + esc(it.id) + '">見た</button></div>').join("") + "</div>";
+  if (isToday && overdue().length) h += '<div class="cbox"><b>繰り越し(終わっていない To do)</b>' + overdue().map(it => itemRow(it, it.date, { carry: true })).join("") + "</div>";
+  if (isToday) { const cds = (C.countdowns || []).filter(c => c.date >= d); if (cds.length) h += '<div class="ccd">' + cds.map(c => "<span>" + esc(c.name) + " まで <b>" + Math.round((Date.parse(c.date) - Date.parse(d)) / 864e5) + "</b>日</span>").join("") + "</div>"; }
+  const its = itemsOn(d).sort((a, b) => (hm(a.time) ?? 9999) - (hm(b.time) ?? 9999)), rems = remindersOn(d);
+  const timed = its.filter(i => i.time), untimed = its.filter(i => !i.time);
+  // 重なり(詰め込みすぎ)を見つける
+  let clash = 0; for (let i = 1; i < timed.length; i++) { const p = timed[i - 1], pe = hm(p.end) ?? (hm(p.time) + 30); if (hm(timed[i].time) < pe) clash++; }
+  h += '<div class="cbox"><b>予定・To do</b>' + (clash ? '<div class="cwarn">時間が重なっている予定が ' + clash + " つあります</div>" : "") +
+    (timed.length ? '<div class="ctl">' + timed.map(it => itemRow(it, d)).join("") + "</div>" : "") + untimed.map(it => itemRow(it, d)).join("") +
+    rems.map(n => '<div class="ci rem"><span class="cdot" style="background:var(--remind)"></span><div class="ct" data-open="' + esc(n.id) + '"><span>' + (n.remind.time ? "<b>" + esc(n.remind.time) + "</b> " : "") + esc(titleOf(n)) + "</span><small>リマインダー</small></div></div>").join("") +
+    (its.length || rems.length ? "" : '<div class="cnone">まだ何もありません</div>') + "</div>";
+  h += '<div class="cbox"><b>この日のメモ</b><textarea data-cnote="day" data-key="' + esc(d) + '" placeholder="この日に考えたこと、あったこと">' + esc((C.dayNotes || {})[d] || "") + "</textarea></div>";
+  const en = (C.energy || {})[d];
+  h += '<div class="cbox"><b>気力</b><div class="cen">' + [1, 2, 3, 4, 5].map(n => '<button type="button" data-cen="' + n + '" aria-pressed="' + (en === n) + '">' + n + "</button>").join("") + '<small>1=からっぽ 5=満タン</small></div></div>';
+  return h;
+}
+function habitStreak(id, d){ let n = 0, x = d; while (((cal().habitLog || {})[x] || []).includes(id) && n < 999) { n++; x = addDays(x, -1); } return n; }
+function weekView(){
+  const a = weekStart(CV.cur), C = cal();
+  return '<div class="cweek">' + [0, 1, 2, 3, 4, 5, 6].map(k => { const d = addDays(a, k), its = itemsOn(d).sort((x, y) => (hm(x.time) ?? 9999) - (hm(y.time) ?? 9999));
+      return '<div class="cwd' + (d === today() ? " today" : "") + '"><div class="cwh" data-cday="' + d + '">' + md(d) + "(" + WD[wdOf(d)] + ")" + ((C.energy || {})[d] ? ' <small>気力' + C.energy[d] + "</small>" : "") + "</div>" + its.map(it => itemRow(it, d)).join("") + remindersOn(d).map(n => '<div class="ci rem"><span class="cdot" style="background:var(--remind)"></span><div class="ct" data-open="' + esc(n.id) + '"><span>' + esc(titleOf(n)) + "</span></div></div>").join("") + "</div>"; }).join("") + "</div>" +
+    '<div class="cbox"><b>この週のメモ</b><textarea data-cnote="week" data-key="' + esc(weekKey(a)) + '" placeholder="この週の目標・振り返り">' + esc((C.weekNotes || {})[weekKey(a)] || "") + "</textarea></div>";
+}
+function monthView(){
+  const m0 = CV.cur.slice(0, 7) + "-01", start = weekStart(m0), C = cal();
+  let cells = ""; for (let k = 0; k < 42; k++) { const d = addDays(start, k); if (k >= 35 && d.slice(0, 7) !== m0.slice(0, 7)) break;
+    const its = itemsOn(d), en = (C.energy || {})[d];
+    cells += '<div class="cmd' + (d.slice(0, 7) !== m0.slice(0, 7) ? " out" : "") + (d === today() ? " today" : "") + '" data-cday="' + d + '"><div class="cmn">' + (+d.slice(8)) + (en ? '<i class="cen' + en + '"></i>' : "") + "</div>" +
+      its.slice(0, 3).map(it => '<div class="cmi' + ((it.repeat ? (it.doneDates || []).includes(d) : it.done) ? " done" : "") + '" style="--sc:' + setColor(it.set) + '">' + esc(it.title) + "</div>").join("") + (its.length > 3 ? '<div class="cmore">+' + (its.length - 3) + "</div>" : "") + (remindersOn(d).length ? '<div class="cmi" style="--sc:var(--remind)">🔔' + remindersOn(d).length + "</div>" : "") + "</div>"; }
+  return '<div class="cmonth">' + ["月", "火", "水", "木", "金", "土", "日"].map(w => '<div class="cmh">' + w + "</div>").join("") + cells + "</div>" +
+    '<div class="cbox"><b>この月のメモ</b><textarea data-cnote="month" data-key="' + esc(monthKey(m0)) + '" placeholder="この月の目標・振り返り">' + esc((C.monthNotes || {})[monthKey(m0)] || "") + "</textarea></div>";
+}
+function yearView(){
+  const y = CV.cur.slice(0, 4);
+  return '<div class="cyear">' + Array.from({ length: 12 }, (_, i) => { const m = y + "-" + String(i + 1).padStart(2, "0"), first = m + "-01", start = weekStart(first);
+      let g = ""; for (let k = 0; k < 42; k++) { const d = addDays(start, k); if (k >= 35 && d.slice(0, 7) !== m) break; const n = d.slice(0, 7) === m ? itemsOn(d).length : 0;
+        g += '<i class="' + (d.slice(0, 7) !== m ? "o" : n > 2 ? "n3" : n ? "n1" : "") + (d === today() ? " t" : "") + '"></i>'; }
+      return '<div class="cym" data-cmonth="' + m + '"><b>' + (i + 1) + "月</b><div class=\"cyg\">" + g + "</div></div>"; }).join("") + "</div>";
+}
+function agendaView(){
+  const C = cal(), d0 = today(); let h = "";
+  const cds = (C.countdowns || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+  h += '<div class="cbox"><b>カウントダウン</b>' + cds.map(c => '<div class="crow">' + esc(c.name) + "(" + esc(md(c.date)) + ")まで <b>" + Math.round((Date.parse(c.date) - Date.parse(d0)) / 864e5) + '</b>日<button type="button" class="btn quiet sm cdel" data-ccd-del="' + esc(c.id) + '">外す</button></div>').join("") +
+    '<div class="cquick sm"><input id="ccd-name" placeholder="名前(例:共通テスト)"><input id="ccd-date" type="date"><button type="button" class="btn sm" data-ccd-add>足す</button></div></div>';
+  for (let k = 0; k < 60; k++) { const d = addDays(d0, k), its = itemsOn(d); if (!its.length && !remindersOn(d).length) continue;
+    h += '<div class="cag"><div class="cwh" data-cday="' + d + '">' + md(d) + "(" + WD[wdOf(d)] + ")" + (k === 0 ? " 今日" : k === 1 ? " 明日" : "") + "</div>" + its.sort((a, b) => (hm(a.time) ?? 9999) - (hm(b.time) ?? 9999)).map(it => itemRow(it, d)).join("") + remindersOn(d).map(n => '<div class="ci rem"><span class="cdot" style="background:var(--remind)"></span><div class="ct" data-open="' + esc(n.id) + '"><span>' + esc(titleOf(n)) + "</span></div></div>").join("") + "</div>"; }
+  if ((C.templates || []).length) h += '<div class="cbox"><b>テンプレート</b>' + C.templates.map(t => '<div class="crow">' + esc(t.title) + '<button type="button" class="btn quiet sm cdel" data-tpl-del="' + esc(t.id) + '">外す</button></div>').join("") + "</div>";
+  return h;
+}
+function boxView(){
+  const its = cal().items.filter(it => it.todo && !it.done && visible(it));
+  const q = (i, u) => its.filter(it => !!it.imp === i && !!it.urg === u);
+  const cell = (t, s, a) => '<div class="cq4"><b>' + t + "</b><small>" + s + "</small>" + (a.map(it => itemRow(it, it.date)).join("") || '<div class="cnone">なし</div>') + "</div>";
+  return '<div class="cq4g">' + cell("重要・緊急", "すぐやる", q(true, true)) + cell("重要・緊急でない", "時間を取ってやる", q(true, false)) + cell("緊急・重要でない", "短く片づける", q(false, true)) + cell("どちらでもない", "やめてもよい", q(false, false)) + "</div>" +
+    '<p class="chint">To do を開いて「重要」「緊急」を付けると、ここで分かれます。</p>';
+}
+function inboxView(){
+  const its = cal().items.filter(it => !it.date && !it.done);
+  return '<div class="cbox"><b>受信箱(日付をまだ決めていないもの)</b>' + (its.map(it => '<div class="crow wide">' + itemRow(it, "") + '<input type="date" data-ci-date="' + esc(it.id) + '"></div>').join("") || '<div class="cnone">空です</div>') + "</div>" +
+    '<p class="chint">日付を書かずに入れたものはここに来ます。日付を選ぶと、その日に出ます。</p>';
+}
+function editSheet(){
+  const it = cal().items.find(x => x.id === CV.edit); if (!it) return "";
+  const sel = (id, opts, v) => '<select id="' + id + '">' + opts.map(([val, lab]) => '<option value="' + esc(val) + '"' + (String(v) === String(val) ? " selected" : "") + ">" + esc(lab) + "</option>").join("") + "</select>";
+  return '<div class="csheet"><div class="cs-in"><b>編集</b>' +
+    '<div class="f"><label>名前</label><input id="ce-title" value="' + esc(it.title) + '"></div>' +
+    '<div class="grid2"><div class="f"><label>日付(空なら受信箱)</label><input id="ce-date" type="date" value="' + esc(it.date || "") + '"></div><div class="f"><label>繰り返し</label>' + sel("ce-repeat", [["", "なし"], ["日", "毎日"], ["週", "毎週"], ["月", "毎月"]], it.repeat) + "</div>" +
+    '<div class="f"><label>始まり</label><input id="ce-time" type="time" value="' + esc(it.time || "") + '"></div><div class="f"><label>終わり</label><input id="ce-end" type="time" value="' + esc(it.end || "") + '"></div>' +
+    '<div class="f"><label>組</label>' + sel("ce-set", cal().sets.map(x => [x, x]), it.set) + '</div><div class="f"><label>通知</label>' + sel("ce-before", [["0", "その時刻"], ["10", "10分前"], ["60", "1時間前"], ["1440", "1日前"]], it.before || 0) + "</div></div>" +
+    '<div class="ctog">' + [["todo", "To do"], ["roadmap", "行軍表に出す"], ["notify", "🔔 通知"], ["big", "大事(おやすみモードも越える)"], ["imp", "重要"], ["urg", "緊急"], ["fixed", "動かせない予定"]].map(([k, l]) => '<button type="button" data-ce-flag="' + k + '" aria-pressed="' + (k === "roadmap" ? it.roadmap !== false : !!it[k]) + '">' + l + "</button>").join("") + "</div>" +
+    '<div class="f"><label>メモ</label><textarea id="ce-memo">' + esc(it.memo || "") + "</textarea></div>" +
+    (it.sentKey ? '<p class="chint">この通知はもう予約してあります。時刻を変えると新しく予約し直しますが、先に予約した分は取り消せずに届きます。</p>' : "") +
+    '<div class="cs-ops"><button type="button" class="btn sm" data-ce-save>保存</button><button type="button" class="btn ghost sm" data-ce-tpl>テンプレートにする</button><button type="button" class="btn danger sm" data-ce-del>消す</button><button type="button" class="btn quiet sm" data-ce-close>閉じる</button></div></div></div>';
+}
+async function quickAdd(tpl){
+  const inp = document.getElementById("cq"), raw = tpl ? tpl.title : ((inp || {}).value || "").trim(); if (!raw) return;
+  const p = tpl ? { title: tpl.title, date: CV.view === "日" ? CV.sel : today(), time: tpl.time || "", repeat: "", set: tpl.set, notify: tpl.notify } : parseQuick(raw);
+  if (!p.title) return say("cal-status", "名前を入れてください", true);
+  if (!p.date && CV.view === "日" && !tpl && !/受信箱/.test(raw)) p.date = null;
+  const it = newItem({ title: p.title, date: p.date || null, time: p.time || "", repeat: p.repeat || "", set: p.set || "その他", todo: tpl ? !!tpl.todo : CV.todo, notify: p.notify != null ? p.notify : CV.notify, end: tpl ? tpl.end || "" : "" });
+  if (p.set && !cal().sets.includes(p.set)) await calSave(C => { C.sets.push(p.set); });
+  await calSave(C => { C.items.push(it); });
+  say("cal-status", (it.date ? md(it.date) + (it.time ? " " + it.time : "") + " に入れました" : "受信箱に入れました") + (it.notify ? "(通知あり)" : ""));
+}
+async function calClick(e){
+  const q = s => e.target.closest(s); let b;
+  if ((b = q("[data-cv]"))) { CV.view = b.dataset.cv; return renderCal(); }
+  if ((b = q("[data-cnav]"))) { const k = +b.dataset.cnav;
+    if (k === 0) { CV.cur = today(); CV.sel = today(); }
+    else if (CV.view === "日") CV.sel = addDays(CV.sel, k); else if (CV.view === "週") CV.cur = addDays(CV.cur, 7 * k); else if (CV.view === "月") CV.cur = addMonths(CV.cur.slice(0, 7) + "-01", k); else CV.cur = (+CV.cur.slice(0, 4) + k) + CV.cur.slice(4);
+    return renderCal(); }
+  if ((b = q("[data-cday]"))) { CV.sel = b.dataset.cday; CV.cur = CV.sel; CV.view = "日"; return renderCal(); }
+  if ((b = q("[data-cmonth]"))) { CV.cur = b.dataset.cmonth + "-01"; CV.view = "月"; return renderCal(); }
+  if ((b = q("[data-cset]"))) { const x = b.dataset.cset; return calSave(C => { C.hidden = C.hidden || []; C.hidden = C.hidden.includes(x) ? C.hidden.filter(y => y !== x) : C.hidden.concat([x]); }); }
+  if (q("[data-cq-add]")) return quickAdd();
+  if (q("[data-cq-todo]")) { CV.todo = !CV.todo; return renderCal(); }
+  if (q("[data-cq-notify]")) { CV.notify = !CV.notify; return renderCal(); }
+  if ((b = q("[data-tpl]"))) { const t = (cal().templates || []).find(x => x.id === b.dataset.tpl); if (t) return quickAdd(t); }
+  if ((b = q("[data-tpl-del]"))) { const id = b.dataset.tplDel; return calSave(C => { C.templates = (C.templates || []).filter(t => t.id !== id); }); }
+  if ((b = q("[data-ci-done]"))) { const id = b.dataset.ciDone, d = b.dataset.d;
+    return calSave(C => { const it = C.items.find(x => x.id === id); if (!it) return;
+      if (it.repeat) { it.doneDates = it.doneDates || []; it.doneDates = it.doneDates.includes(d) ? it.doneDates.filter(x => x !== d) : it.doneDates.concat([d]).slice(-60); }
+      else { it.done = !it.done; it.doneAt = it.done ? today() : null; if (it.done) it.seen = true; } }); }
+  if ((b = q("[data-ci-today]"))) { const id = b.dataset.ciToday; return calSave(C => { const it = C.items.find(x => x.id === id); if (it) { it.date = today(); it.carried = (it.carried || 0) + 1; } }); }
+  if ((b = q("[data-ci-inbox]"))) { const id = b.dataset.ciInbox; return calSave(C => { const it = C.items.find(x => x.id === id); if (it) it.date = null; }); }
+  if ((b = q("[data-ci-seen]"))) { const id = b.dataset.ciSeen; return calSave(C => { const it = C.items.find(x => x.id === id); if (it) it.seen = true; }); }
+  if ((b = q("[data-ci-edit]"))) { CV.edit = b.dataset.ciEdit; return renderCal(); }
+  if ((b = q("[data-open]"))) { openNote(b.dataset.open); return; }   // リマインダーは、ホームと同じように開く
+  if ((b = q("[data-cen]"))) { const n = +b.dataset.cen, d = CV.sel; return calSave(C => { C.energy = C.energy || {}; if (C.energy[d] === n) delete C.energy[d]; else C.energy[d] = n; }); }
+  if ((b = q("[data-chab]"))) { const id = b.dataset.chab, d = CV.sel; return calSave(C => { C.habitLog = C.habitLog || {}; const l = C.habitLog[d] || []; C.habitLog[d] = l.includes(id) ? l.filter(x => x !== id) : l.concat([id]); }); }
+  if (q("[data-chab-add]")) { const t = ((document.getElementById("chab-new") || {}).value || "").trim(); if (!t) return; return calSave(C => { C.habits = (C.habits || []).concat([{ id: uid(), name: t }]); }); }
+  if ((b = q("[data-chab-del]"))) { const id = b.dataset.chabDel; if (!confirm("この習慣を外す?(記録は残る)")) return; return calSave(C => { C.habits = (C.habits || []).filter(x => x.id !== id); }); }
+  if (q("[data-ccd-add]")) { const nm = ((document.getElementById("ccd-name") || {}).value || "").trim(), dt = (document.getElementById("ccd-date") || {}).value; if (!nm || !dt) return say("cal-status", "名前と日付を入れてください", true); return calSave(C => { C.countdowns = (C.countdowns || []).concat([{ id: uid(), name: nm, date: dt }]); }); }
+  if ((b = q("[data-ccd-del]"))) { const id = b.dataset.ccdDel; return calSave(C => { C.countdowns = (C.countdowns || []).filter(x => x.id !== id); }); }
+  // 編集
+  if ((b = q("[data-ce-flag]"))) { const it = cal().items.find(x => x.id === CV.edit); if (it) { readEdit(it); const fk = b.dataset.ceFlag; it["__" + fk] = !(("__" + fk) in it ? it["__" + fk] : (fk === "roadmap" ? it.roadmap !== false : it[fk])); b.setAttribute("aria-pressed", String(it["__" + b.dataset.ceFlag])); } return; }
+  if (q("[data-ce-close]")) { const it = cal().items.find(x => x.id === CV.edit); if (it) Object.keys(it).filter(k => k.startsWith("__")).forEach(k => delete it[k]); CV.edit = null; return renderCal(); }
+  if (q("[data-ce-save]")) { const id = CV.edit, it0 = cal().items.find(x => x.id === id); if (!it0) return; const v = readEdit(it0); CV.edit = null;
+    return calSave(C => { const it = C.items.find(x => x.id === id); if (!it) return; Object.keys(it).filter(k => k.startsWith("__")).forEach(k => delete it[k]); Object.assign(it, v); if (v.date !== it0.__prevDate) it.seen = false; }); }
+  if (q("[data-ce-tpl]")) { const it = cal().items.find(x => x.id === CV.edit); if (!it) return; const v = readEdit(it); await calSave(C => { C.templates = (C.templates || []).concat([{ id: uid(), title: v.title, time: v.time, end: v.end, todo: v.todo, notify: v.notify, set: v.set }]); }); return say("cal-status", "テンプレートにしました(入れる欄の下に出ます)"); }
+  if (q("[data-ce-del]")) { const id = CV.edit; if (!confirm("消す?")) return; CV.edit = null; return calSave(C => { C.items = C.items.filter(x => x.id !== id); }); }
+}
+function readEdit(it){
+  const g = id => (document.getElementById(id) || {}).value;
+  const flag = k => ("__" + k) in it ? !!it["__" + k] : !!it[k];
+  return { title: (g("ce-title") || it.title).trim(), date: g("ce-date") || null, repeat: g("ce-repeat") || "", time: g("ce-time") || "", end: g("ce-end") || "", set: g("ce-set") || it.set, before: +(g("ce-before") || 0), memo: g("ce-memo") || "",
+    todo: flag("todo"), roadmap: ("__roadmap" in it) ? !!it.__roadmap : it.roadmap !== false, notify: flag("notify"), big: flag("big"), imp: flag("imp"), urg: flag("urg"), fixed: flag("fixed") };
+}
+async function calChange(e){
+  const t = e.target, d = t.dataset;
+  if (d.cnote) { const key = d.key, v = t.value, f = { day: "dayNotes", week: "weekNotes", month: "monthNotes" }[d.cnote]; return calSave(C => { C[f] = C[f] || {}; if (v.trim()) C[f][key] = v; else delete C[f][key]; }); }
+  if (d.ciDate) { const id = d.ciDate, v = t.value; return calSave(C => { const it = C.items.find(x => x.id === id); if (it) it.date = v || null; }); }
+}
+/* 設定:通知 */
+function renderNtfySettings(){
+  const box = document.getElementById("ntfy-settings"); if (!box || !state.doc || !state.doc.cal) return;
+  const n = cal().ntfy;
+  box.innerHTML = '<p style="color:var(--sub);font-size:.84rem;margin:.2rem 0">スマホの ntfy で、ここに入れたトピックを購読してください。時刻を決めた通知は、3日先までの分を、思案を開いたときに予約します(3日より先のものは、近づいてから開いたときに予約されます)。</p>' +
+    '<div class="grid2"><div class="f"><label>サーバー</label><input id="nt-server" value="' + esc(n.server || "https://ntfy.sh") + '"></div><div class="f"><label>トピック(他の人に知られない名前に)</label><input id="nt-topic" value="' + esc(n.topic || "") + '" autocomplete="off"></div>' +
+    '<div class="f"><label>時刻のない予定の通知</label><input id="nt-allday" type="time" value="' + esc(n.allDayAt || "08:00") + '"></div></div>' +
+    '<div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center"><button class="btn sm" type="button" id="nt-save">保存</button><button class="btn ghost sm" type="button" id="nt-test">通知のテスト</button><span class="status" id="nt-status"></span></div>' +
+    '<p style="color:var(--sub);font-size:.8rem;margin:.5rem 0 0">テストを押すと、すぐに1通、15秒後にもう1通(予約した通知の試し)が届きます。大事な予定は、おやすみモードを越える強さで届きます。マナーモードでも気づきたいときは、MacroDroid で「ntfy の通知が来たら音を鳴らす」マクロを作ると確実です。</p>';
+  if (!box.__bound) { box.__bound = true; box.addEventListener("click", async e => {
+    if (e.target.id === "nt-save") { const v = id => (document.getElementById(id) || {}).value.trim(); await commit(doc => { doc.cal.ntfy = { server: v("nt-server") || "https://ntfy.sh", topic: v("nt-topic"), allDayAt: v("nt-allday") || "08:00" }; }, "nt-status"); say("nt-status", "保存しました"); calSchedule(); }
+    if (e.target.id === "nt-test") { try { await ntfySend("思案:通知のテスト", "すぐに届く通知です", { prio: 4, tags: "bell" }); await ntfySend("思案:予約した通知のテスト", "15秒後に届くよう予約した通知です", { in: "15s", prio: 4, tags: "alarm_clock" }); say("nt-status", "送りました。すぐに1通、15秒後にもう1通届きます"); } catch (er) { say("nt-status", er.message, true); } }
+  }); }
+}
 
 /* ───── 問いの束 ───── */
 function promptPool(includeOff){
@@ -1022,7 +1303,56 @@ window.__shian = { state, G, linksOf, backlinksOf, titleOf, load, openVault, loc
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
 </script>
-<style>.se-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0;font-size:.86rem}.se-btn{min-width:2.6rem;border:1px solid #bbb;border-radius:999px;background:#fff;padding:.1rem .7rem;font:inherit;cursor:pointer}.se-btn[aria-pressed="true"]{background:#1f2328;color:#fff;border-color:#1f2328}.se-vol{display:flex;align-items:center;gap:.3rem}.se-vol input{width:8rem}</style>
+<style>.se-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0;font-size:.86rem}.se-btn{min-width:2.6rem;border:1px solid #bbb;border-radius:999px;background:#fff;padding:.1rem .7rem;font:inherit;cursor:pointer}.se-btn[aria-pressed="true"]{background:#1f2328;color:#fff;border-color:#1f2328}.se-vol{display:flex;align-items:center;gap:.3rem}.se-vol input{width:8rem}
+/* 日付 */
+.calbadge[hidden]{display:none}
+.calbadge{display:inline-block;min-width:1.1rem;margin-left:.2rem;padding:0 .3rem;border-radius:999px;background:var(--go);color:#fff;font-size:.68rem;line-height:1.1rem}
+#cal .cquick{display:flex;gap:.4rem;margin:.4rem 0}
+#cal .cquick input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:.5rem .6rem}
+#cal .cquick.sm input{padding:.3rem .5rem;font-size:.85rem}
+#cal .ctog,#cal .cviews,#cal .csets{display:flex;gap:.3rem;flex-wrap:wrap;margin:.35rem 0}
+#cal .ctog button,#cal .cviews button,#cal .csets button,#cal .cen button{border:1px solid var(--rule);background:transparent;border-radius:999px;padding:.2rem .65rem;font-size:.82rem;cursor:pointer}
+#cal .ctog button[aria-pressed="true"],#cal .cviews button[aria-pressed="true"],#cal .cen button[aria-pressed="true"]{background:var(--link);color:var(--sky);border-color:var(--link);font-weight:700}
+#cal .csets button{border-color:var(--sc)} #cal .csets button[aria-pressed="true"]{background:var(--sc);border-color:var(--sc)} #cal .csets button[aria-pressed="false"]{opacity:.45}
+#cal .ctog .tpl{border-style:dashed}
+#cal .cnav{display:flex;align-items:center;gap:.4rem;margin:.3rem 0}
+#cal .cnav b{flex:1;text-align:center}
+#cal .cbox{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:.6rem .7rem;margin:.6rem 0}
+#cal .cbox.warn{border-color:var(--go)}
+#cal .cbox > b{display:block;font-size:.85rem;color:var(--sub);margin-bottom:.3rem}
+#cal .cbox textarea{width:100%;min-height:4.2rem;background:var(--deep);border:1px solid var(--rule);border-radius:8px;padding:.45rem}
+#cal .ci{display:flex;gap:.5rem;align-items:center;padding:.35rem .4rem;border-left:3px solid var(--sc,var(--sub));margin:.25rem 0;border-radius:4px;background:var(--deep)}
+#cal .ci.flex{border-left-style:dashed}
+#cal .ci.done .ct span{opacity:.5;text-decoration:line-through}
+#cal .ci .ct{flex:1;cursor:pointer;min-width:0} #cal .ci .ct span{display:block} #cal .ci .ct small{color:var(--sub);font-size:.72rem}
+#cal .cchk{width:1.5rem;height:1.5rem;border-radius:50%;border:2px solid var(--sc,var(--sub));background:transparent;color:var(--sky);flex:none;cursor:pointer;font-size:.8rem;line-height:1}
+#cal .cchk.on{background:var(--sc,var(--sprout))}
+#cal .cdot{width:.6rem;height:.6rem;border-radius:50%;background:var(--sc,var(--sub));flex:none}
+#cal .cops{display:flex;gap:.3rem;flex-wrap:wrap}
+#cal .crow{display:flex;gap:.5rem;align-items:center;padding:.2rem 0;font-size:.9rem} #cal .crow small{color:var(--sub)} #cal .crow .cdel{margin-left:auto}
+#cal .crow.wide{display:block}
+#cal .cnone,#cal .chint{color:var(--sub);font-size:.82rem}
+#cal .cwarn{color:var(--go);font-size:.82rem;margin:.2rem 0}
+#cal .ccd{display:flex;gap:.8rem;flex-wrap:wrap;font-size:.85rem;margin:.4rem 0} #cal .ccd b{color:var(--plan);font-size:1.05rem}
+#cal .cen{display:flex;gap:.3rem;align-items:center} #cal .cen small{color:var(--sub);font-size:.72rem;margin-left:.3rem}
+#cal .cwd,#cal .cag{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:.45rem .6rem;margin:.4rem 0} #cal .cwd.today{border-color:var(--link)}
+#cal .cwh{font-size:.82rem;color:var(--sub);cursor:pointer}
+#cal .cmonth{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:.4rem 0}
+#cal .cmh{text-align:center;font-size:.72rem;color:var(--sub)}
+#cal .cmd{min-height:4.4rem;background:var(--panel);border-radius:4px;padding:2px 3px;cursor:pointer;overflow:hidden} #cal .cmd.out{opacity:.4} #cal .cmd.today{outline:2px solid var(--link)}
+#cal .cmn{font-size:.72rem;display:flex;align-items:center;gap:3px}
+#cal .cmn i{width:.45rem;height:.45rem;border-radius:50%;display:inline-block} #cal .cen1{background:#F07F5E} #cal .cen2{background:#F2C46B} #cal .cen3{background:#9A9BB8} #cal .cen4{background:#7FC79A} #cal .cen5{background:#5FC6C0}
+#cal .cmi{font-size:.64rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid var(--sc);padding-left:2px;margin-top:1px} #cal .cmi.done{opacity:.45;text-decoration:line-through}
+#cal .cmore{font-size:.62rem;color:var(--sub)}
+#cal .cyear{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+#cal .cym{background:var(--panel);border-radius:8px;padding:.35rem;cursor:pointer} #cal .cym b{font-size:.8rem}
+#cal .cyg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:.2rem} #cal .cyg i{aspect-ratio:1;border-radius:2px;background:var(--deep)} #cal .cyg i.o{background:transparent} #cal .cyg i.n1{background:#9DB8FF66} #cal .cyg i.n3{background:#9DB8FF} #cal .cyg i.t{outline:1px solid var(--plan)}
+#cal .cq4g{display:grid;grid-template-columns:1fr 1fr;gap:.5rem} #cal .cq4{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:.45rem} #cal .cq4 b{display:block;font-size:.85rem} #cal .cq4 small{color:var(--sub);font-size:.72rem}
+#cal .csheet{position:fixed;inset:0;background:#0009;display:flex;align-items:flex-end;justify-content:center;z-index:50}
+#cal .cs-in{background:var(--deep);border:1px solid var(--rule);border-radius:14px 14px 0 0;padding:.8rem;max-width:680px;width:100%;max-height:88vh;overflow:auto;padding-bottom:calc(1rem + env(safe-area-inset-bottom))}
+#cal .cs-in input,#cal .cs-in select,#cal .cs-in textarea{width:100%;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:.4rem}
+#cal .cs-ops{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem}
+</style>
 <script id="se-core">
 // ───────── 効果音(ブラウザの中で音を合成。音のファイルは使わない)─────────
 // 設定(入/切・音量)は 3つのアプリで共通(localStorage の se-on / se-vol)
